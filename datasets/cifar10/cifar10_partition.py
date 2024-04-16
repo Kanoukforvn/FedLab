@@ -3,7 +3,7 @@ import torch
 import torchvision
 
 
-from fedlab.utils.dataset.slicing import noniid_slicing, random_slicing
+from fedlab.utils.dataset.functional import noniid_slicing, random_slicing
 from fedlab.utils.dataset.partition import CIFAR10Partitioner
 from fedlab.utils.dataset import functional as F
 from fedlab.utils.functional import partition_report, save_dict
