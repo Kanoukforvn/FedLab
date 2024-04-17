@@ -199,3 +199,10 @@ unit_test*
 /datasets/*/meta/*
 /datasets/*/train/*
 /datasets/*/test/*
+
+
+#New rules
+imgs/*
+partition-reports/*
+cifar-10-batches-py/*
+*.tar.gz
