@@ -9,6 +9,9 @@ from torch import nn
 import sys
 import torch
 
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append(project_root)
+
 sys.path.append("../../")
 torch.manual_seed(0)
 
