@@ -147,7 +147,7 @@ def get_best_gpu():
     return torch.device("cuda:%d" % (best_device_index))
 
 
-# def partition_report(targets, data_indices, class_num=None, verbose=True, file=None):
+#def partition_report(targets, data_indices, class_num=None, verbose=True, file=None):
 #     """Generate data partition report for clients in ``data_indices``.
 
 #     Generate data partition report for each client according to ``data_indices``, including
@@ -194,7 +194,7 @@ def get_best_gpu():
 #         Client   2,0.00,0.400,0.400,0.200,5
 
 #     """
-#     if not verbose and file is None:
+#   if not verbose and file is None:
 #         print("No partition report generated")
 #         return
 
