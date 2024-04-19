@@ -114,17 +114,21 @@ class EvalPipeline(StandalonePipeline):
             self.acc.append(acc)
     
     def show(self):
-        plt.figure(figsize=(8, 4.5))
-        ax = plt.subplot(1, 2, 1)
-        ax.plot(np.arange(len(self.loss)), self.loss, color='blue', linestyle='-')
-        ax.set_xlabel("Communication Round")
-        ax.set_ylabel("Loss")
-    
-        ax2 = plt.subplot(1, 2, 2)
-        ax2.plot(np.arange(len(self.acc)), self.acc, color='red', linestyle='-')
-        ax2.set_xlabel("Communication Round")
-        ax2.set_ylabel("Accuracy")
-        
+        fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+
+        # Plot loss
+        axs[0].plot(np.arange(len(self.loss)), self.loss, color='blue')
+        axs[0].set_title('Loss')
+        axs[0].set_xlabel('Communication Round')
+        axs[0].set_ylabel('Loss')
+
+        # Plot accuracy
+        axs[1].plot(np.arange(len(self.acc)), self.acc, color='red')
+        axs[1].set_title('Accuracy')
+        axs[1].set_xlabel('Communication Round')
+        axs[1].set_ylabel('Accuracy')
+
+        plt.tight_layout()
         plt.show()
         
     
@@ -138,4 +142,3 @@ standalone_eval = EvalPipeline(handler=handler, trainer=trainer, test_loader=tes
 standalone_eval.main()
 
 standalone_eval.show()
-plt.show()
