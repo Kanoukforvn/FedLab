@@ -277,8 +277,6 @@ def client_inner_dirichlet_partition(targets, num_clients, num_classes, dir_alph
     while np.sum(client_sample_nums) != 0:
         curr_cid = np.random.randint(num_clients)
         # If current node is full resample a client
-        if verbose:
-            print('Remaining Data: %d' % np.sum(client_sample_nums))
         if client_sample_nums[curr_cid] <= 0:
             continue
         client_sample_nums[curr_cid] -= 1
@@ -333,8 +331,6 @@ def client_inner_dirichlet_partition_faster(targets, num_clients, num_classes, d
     while np.sum(client_sample_nums) != 0:
         curr_cid = np.random.randint(num_clients)
         # If current node is full resample a client
-        if verbose:
-            print('Remaining Data: %d' % np.sum(client_sample_nums))
         if client_sample_nums[curr_cid] <= 0:
             continue
         client_sample_nums[curr_cid] -= 1
