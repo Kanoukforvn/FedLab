@@ -114,16 +114,18 @@ class EvalPipeline(StandalonePipeline):
             self.acc.append(acc)
     
     def show(self):
-        plt.figure(figsize=(8,4.5))
-        ax = plt.subplot(1,2,1)
-        ax.plot(np.arange(len(self.loss)), self.loss)
+        plt.figure(figsize=(8, 4.5))
+        ax = plt.subplot(1, 2, 1)
+        ax.plot(np.arange(len(self.loss)), self.loss, color='blue', linestyle='-')
         ax.set_xlabel("Communication Round")
         ax.set_ylabel("Loss")
-        
-        ax2 = plt.subplot(1,2,2)
-        ax2.plot(np.arange(len(self.acc)), self.acc)
+    
+        ax2 = plt.subplot(1, 2, 2)
+        ax2.plot(np.arange(len(self.acc)), self.acc, color='red', linestyle='-')
         ax2.set_xlabel("Communication Round")
-        ax2.set_ylabel("Accuarcy")
+        ax2.set_ylabel("Accuracy")
+    
+        plt.show()
         
         
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
