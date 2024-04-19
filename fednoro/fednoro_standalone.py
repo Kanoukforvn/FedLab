@@ -124,9 +124,10 @@ class EvalPipeline(StandalonePipeline):
         ax2.plot(np.arange(len(self.acc)), self.acc, color='red', linestyle='-')
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuracy")
-    
+        
         plt.show()
         
+    
         
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=False,
@@ -137,3 +138,4 @@ standalone_eval = EvalPipeline(handler=handler, trainer=trainer, test_loader=tes
 standalone_eval.main()
 
 standalone_eval.show()
+plt.show()
