@@ -66,6 +66,7 @@ class PartitionedCIFAR10(FedDataset):
         self.num_clients = num_clients
         self.transform = transform
         self.targt_transform = target_transform
+        self.targets = None
 
         if preprocess:
             self.preprocess(balance=balance,
@@ -102,6 +103,9 @@ class PartitionedCIFAR10(FedDataset):
                                                 train=True,
                                                 transform=self.transform,
                                                 download=self.download)
+        
+        self.targets = trainset.targets
+
         partitioner = CIFAR10Partitioner(trainset.targets,
                                          self.num_clients,
                                          balance=balance,

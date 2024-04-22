@@ -16,7 +16,7 @@ from fedlab.utils.dataset import functional as F
 
 sys.path.append("../../")
 
-trainset = torchvision.datasets.CIFAR10(root="./", train=True, download=True) #FIXME: download=False error certificate url / needed for downloading the dataset 
+trainset = torchvision.datasets.CIFAR10(root="./", train=True, download=True) 
 
 num_clients = 100
 num_classes = 10
@@ -47,14 +47,12 @@ col_names = [f"class-{i}" for i in range(num_classes)]
 for col in col_names:
     hetero_dir_part_df[col] = (hetero_dir_part_df[col] * hetero_dir_part_df['TotalAmount']).astype(int)
 
-#print(hetero_dir_part_df.columns)
 
-
-# select first 10 clients for bar plot
-#hetero_dir_part_df[col_names].iloc[:10].plot.barh(stacked=True)  
-# plt.tight_layout()
-#plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-#plt.xlabel('sample num')
-#plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_100clients.png", dpi=400, bbox_inches = 'tight')
+#select first 10 clients for bar plot
+hetero_dir_part_df[col_names].iloc[:10].plot.barh(stacked=True)  
+plt.tight_layout()
+plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+plt.xlabel('sample num')
+plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_100clients.png", dpi=400, bbox_inches = 'tight')
 
 

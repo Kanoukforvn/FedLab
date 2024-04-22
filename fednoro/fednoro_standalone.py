@@ -1,6 +1,7 @@
 import sys
 import os
 import torch
+import pandas as pd
 
 sys.path.append("../")
 
@@ -11,6 +12,7 @@ sys.path.append(project_root)
 from munch import Munch
 from fedlab.models.mlp import MLP
 from fedlab.models.build_model import build_model
+from fedlab.utils.dataset.functional import partition_report
 
 
 args = Munch
@@ -51,6 +53,32 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
 
 dataset = fed_cifar10.get_dataset(0) # get the 0-th client's dataset
 dataloader = fed_cifar10.get_dataloader(0, batch_size=128) # get the 0-th client's dataset loader with batch size 128
+
+
+# generate partition report
+csv_file = "./partition-reports/cifar10_hetero_dir_0.3_100clients.csv"
+partition_report(PartitionedCIFAR10.targets, fed_cifar10.client_dict, 
+                 class_num=args.n_classes, 
+                 verbose=False, file=csv_file)
+
+
+hetero_dir_part_df = pd.read_csv(csv_file,header=0)
+#print(hetero_dir_part_df.columns)
+hetero_dir_part_df = hetero_dir_part_df.set_index('cid')
+col_names = [f"class-{i}" for i in range(args.n_classes)]
+for col in col_names:
+    hetero_dir_part_df[col] = (hetero_dir_part_df[col] * hetero_dir_part_df['TotalAmount']).astype(int)
+
+
+#select first 10 clients for bar plot
+hetero_dir_part_df[col_names].iloc[:10].plot.barh(stacked=True)  
+plt.tight_layout()
+plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+plt.xlabel('sample num')
+plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_100clients.png", dpi=400, bbox_inches = 'tight')
+
+
+
 
 # client
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
