@@ -20,11 +20,11 @@ from fedlab.utils.dataset.functional import partition_report
 
 args = Munch
 
-args.total_client = 5
+args.total_client = 10
 args.alpha = 0.5
 args.seed = 42
 args.preprocess = True
-args.cuda = True
+args.cuda = False
 args.dataname = "cifar10"
 args.model = "Resnet18"
 args.pretrained = 1
@@ -32,8 +32,9 @@ args.pretrained = 1
 if args.dataname == "cifar10":
     args.n_classes = 10
 
-args.device = "cuda" if torch.cuda.is_available() else "cpu"
-    
+#args.device = "cuda" if torch.cuda.is_available() else "cpu"
+args.device = "cpu"
+
 model = build_model(args)
 
 # We provide a example usage of patitioned CIFAR10 dataset
@@ -59,7 +60,7 @@ dataloader = fed_cifar10.get_dataloader(0, batch_size=128) # get the 0-th client
 
 
 # generate partition report
-csv_file = "./partition-reports/cifar10_hetero_dir_0.3_100clients.csv"
+csv_file = "./partition-reports/cifar10_hetero_dir_0.3_10clients.csv"
 partition_report(fed_cifar10.targets, fed_cifar10.data_indices, 
                  class_num=args.n_classes, 
                  verbose=False, file=csv_file)
@@ -79,7 +80,7 @@ plt.tight_layout()
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('sample num')
 plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_100clients.png", dpi=400, bbox_inches = 'tight')
-
+plt.show()
 
 
 
