@@ -3,6 +3,9 @@ import os
 import torch
 import pandas as pd
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 sys.path.append("../")
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
@@ -103,8 +106,6 @@ args.sample_ratio = 0.1
 
 handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
 
-import matplotlib.pyplot as plt
-import numpy as np
 
 from fedlab.utils.functional import evaluate
 from fedlab.core.standalone import StandalonePipeline
