@@ -102,7 +102,7 @@ trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 # global configuration
-args.com_round = 100
+args.com_round = 200
 args.sample_ratio = 0.1
 
 handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
