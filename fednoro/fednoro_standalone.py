@@ -57,7 +57,7 @@ dataloader = fed_cifar10.get_dataloader(0, batch_size=128) # get the 0-th client
 
 # generate partition report
 csv_file = "./partition-reports/cifar10_hetero_dir_0.3_100clients.csv"
-partition_report(fed_cifar10.targets, fed_cifar10.client_dict, 
+partition_report(fed_cifar10.targets, fed_cifar10.data_indices, 
                  class_num=args.n_classes, 
                  verbose=False, file=csv_file)
 

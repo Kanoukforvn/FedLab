@@ -67,7 +67,7 @@ class PartitionedCIFAR10(FedDataset):
         self.transform = transform
         self.targt_transform = target_transform
         self.targets = None
-
+        
         if preprocess:
             self.preprocess(balance=balance,
                             partition=partition,
