@@ -80,9 +80,14 @@ plt.tight_layout()
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('sample num')
 plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_100clients.png", dpi=400, bbox_inches = 'tight')
-plt.show()
 
+from IPython.display import Image
 
+# Path to the image file
+image_path = "./imgs/cifar10_hetero_dir_0.3_100clients.png"
+
+# Display the image
+Image(filename=image_path)
 
 # client
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
