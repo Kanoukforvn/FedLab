@@ -187,6 +187,7 @@ unit_test.ipynb
 /datasets/sent140/data
 /datasets/shakespeare/data
 /datasets/shakespeare/meta
+/datasets/cifar10/cifar-10*
 
 
 test_client.py
@@ -206,3 +207,4 @@ imgs/*
 partition-reports/*
 cifar-10-batches-py/*
 *.tar.gz
+*.pkl
