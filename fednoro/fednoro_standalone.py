@@ -83,7 +83,7 @@ hetero_dir_part_df[col_names].iloc[:10].plot.barh(stacked=True)
 plt.tight_layout()
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('sample num')
-plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_100clients.png", dpi=400, bbox_inches = 'tight')
+plt.savefig("cifar10_hetero_dir_0.3_100clients.png")
 plt.show()
 
 # client
@@ -162,8 +162,8 @@ class EvalPipeline(StandalonePipeline):
         plt.xlabel('Communication Round')
         plt.ylabel('Accuracy')
 
-        plt.savefig(f"./imgs/cifar10_hetero_dir_loss_accuracy.png", dpi=400, bbox_inches='tight')
-        plt.tight_layout()
+        plt.savefig("cifar10_hetero_dir_loss_accuracy.png")
+        #plt.tight_layout()
         plt.show()
         
     
