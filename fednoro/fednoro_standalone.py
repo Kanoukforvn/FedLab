@@ -3,7 +3,10 @@ import os
 import torch
 import pandas as pd
 
+import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.use('Agg')  # Use the 'Agg' backend which doesn't require a display
+
 import numpy as np
 
 sys.path.append("../")
@@ -81,7 +84,7 @@ plt.tight_layout()
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('sample num')
 plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_100clients.png", dpi=400, bbox_inches = 'tight')
-plt.show();
+plt.show()
 
 # client
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
@@ -143,23 +146,25 @@ class EvalPipeline(StandalonePipeline):
             self.acc.append(acc)
     
     def show(self):
-        fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+        plt.figure(figsize=(12, 6))  # Set figure size here
 
         # Plot loss
-        axs[0].plot(np.arange(len(self.loss)), self.loss, color='blue')
-        axs[0].set_title('Loss')
-        axs[0].set_xlabel('Communication Round')
-        axs[0].set_ylabel('Loss')
+        plt.subplot(1, 2, 1)
+        plt.plot(np.arange(len(self.loss)), self.loss, color='blue')
+        plt.title('Loss')
+        plt.xlabel('Communication Round')
+        plt.ylabel('Loss')
 
         # Plot accuracy
-        axs[1].plot(np.arange(len(self.acc)), self.acc, color='red')
-        axs[1].set_title('Accuracy')
-        axs[1].set_xlabel('Communication Round')
-        axs[1].set_ylabel('Accuracy')
+        plt.subplot(1, 2, 2)
+        plt.plot(np.arange(len(self.acc)), self.acc, color='red')
+        plt.title('Accuracy')
+        plt.xlabel('Communication Round')
+        plt.ylabel('Accuracy')
 
-        plt.savefig(f"./imgs/cifar10_hetero_dir_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/cifar10_hetero_dir_loss_accuracy.png", dpi=400, bbox_inches='tight')
         plt.tight_layout()
-        plt.show();
+        plt.show()
         
     
         
@@ -171,4 +176,4 @@ test_loader = DataLoader(test_data, batch_size=1024)
 standalone_eval = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
 standalone_eval.main()
 
-standalone_eval.show();
+standalone_eval.show()
