@@ -17,6 +17,7 @@ from munch import Munch
 from fedlab.models.mlp import MLP
 from fedlab.models.build_model import build_model
 from fedlab.utils.dataset.functional import partition_report
+from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files, get_output, get_current_consistency_weight, identify_noise_type
 
 
 args = Munch
@@ -29,11 +30,12 @@ args.cuda = False
 args.dataname = "cifar10"
 args.model = "Resnet18"
 args.pretrained = 1
+args.num_users = args.total_client
 
 if args.dataname == "cifar10":
     args.n_classes = 10
 
-args.device = "cuda" if torch.cuda.is_available() else "cpu"
+#args.device = "cuda" if torch.cuda.is_available() else "cpu"
 args.device = "cpu"
 
 model = build_model(args)
@@ -74,7 +76,6 @@ col_names = [f"class-{i}" for i in range(args.n_classes)]
 for col in col_names:
     hetero_dir_part_df[col] = (hetero_dir_part_df[col] * hetero_dir_part_df['TotalAmount']).astype(int)
 
-
 #select first 10 clients for bar plot
 hetero_dir_part_df[col_names].iloc[:10].plot.barh(stacked=True)  
 plt.tight_layout()
@@ -82,6 +83,16 @@ plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('sample num')
 plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_100clients.png", dpi=400, bbox_inches = 'tight')
 plt.show()
+
+#noise
+args.level_n_lowerb = 0.3
+args.level_n_upperb = 0.5
+args.level_n_system = 0.4
+args.n_type = "random"
+
+y_train = np.array(fed_cifar10.targets)
+y_train_noisy, gamma_s, real_noise_level = add_noise(args, y_train, fed_cifar10.data_indices)
+fed_cifar10.targets = y_train_noisy
 
 
 # client
