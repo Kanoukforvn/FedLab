@@ -24,7 +24,7 @@ args.total_client = 10
 args.alpha = 0.5
 args.seed = 42
 args.preprocess = True
-args.cuda = False
+args.cuda = True
 args.dataname = "cifar10"
 args.model = "Resnet18"
 args.pretrained = 1
@@ -32,7 +32,8 @@ args.pretrained = 1
 if args.dataname == "cifar10":
     args.n_classes = 10
 
-#args.device = "cuda" if torch.cuda.is_available() else "cpu"
+print(torch.cuda.is_available())
+args.device = "cuda" if torch.cuda.is_available() else "cpu"
 args.device = "cpu"
 
 model = build_model(args)
@@ -81,14 +82,6 @@ plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('sample num')
 plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_100clients.png", dpi=400, bbox_inches = 'tight')
 plt.show()
-
-from IPython.display import Image
-
-# Path to the image file
-image_path = "./imgs/cifar10_hetero_dir_0.3_100clients.png"
-
-# Display the image
-Image(filename=image_path)
 
 # client
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
