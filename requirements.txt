@@ -6,6 +6,14 @@ scikit-learn
 munch
 seaborn
 matplotlib
+efficientnet_pytorch
+numpy
+pandas
+pretrainedmodels
+scikit_learn
+tensorboardx
+pillow
+
 
 torch>=1.7.1
 torchvision>=0.8.2
