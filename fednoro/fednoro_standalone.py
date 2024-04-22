@@ -80,6 +80,7 @@ plt.tight_layout()
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('sample num')
 plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_100clients.png", dpi=400, bbox_inches = 'tight')
+plt.show()
 
 from IPython.display import Image
 
@@ -163,6 +164,7 @@ class EvalPipeline(StandalonePipeline):
         axs[1].set_xlabel('Communication Round')
         axs[1].set_ylabel('Accuracy')
 
+        plt.savefig(f"./imgs/cifar10_hetero_dir_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
         plt.tight_layout()
         plt.show()
         
