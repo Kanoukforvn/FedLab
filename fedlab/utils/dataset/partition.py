@@ -96,7 +96,6 @@ class CIFAR10Partitioner(DataPartitioner):
         seed (int, optional): Random seed. Default as ``None``.
     """
 
-    num_classes = 10
 
     def __init__(self, targets, num_clients,
                  balance=True, partition="iid",
@@ -118,6 +117,7 @@ class CIFAR10Partitioner(DataPartitioner):
         self.unbalance_sgm = unbalance_sgm
         self.verbose = verbose
         self.min_require_size = min_require_size
+        self.num_classes = 10
         # self.rng = np.random.default_rng(seed)  # rng currently not supports randint
         np.random.seed(seed)
 

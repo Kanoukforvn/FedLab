@@ -117,6 +117,7 @@ class PartitionedCIFAR10(FedDataset):
                                          seed=seed)
 
         self.data_indices = partitioner.client_dict
+        self.n_classes = partitioner.num_classes
         
         samples, labels = [], []
         for x, y in trainset:
