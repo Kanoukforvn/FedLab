@@ -159,7 +159,7 @@ class EvalPipeline(StandalonePipeline):
 
         plt.savefig(f"./imgs/cifar10_hetero_dir_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
         plt.tight_layout()
-        plt.show()
+        plt.show();
         
     
         
@@ -171,4 +171,4 @@ test_loader = DataLoader(test_data, batch_size=1024)
 standalone_eval = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
 standalone_eval.main()
 
-standalone_eval.show()
+standalone_eval.show();
