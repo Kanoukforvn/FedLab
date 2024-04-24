@@ -23,140 +23,156 @@ from ...utils.dataset.partition import CIFAR10Partitioner
 
 
 class PartitionedCIFAR10(FedDataset):
-    """:class:`FedDataset` with partitioning preprocess. For detailed partitioning, please
-    check `Federated Dataset and DataPartitioner <https://fedlab.readthedocs.io/en/master/tutorials/dataset_partition.html>`_.
+    """Class for partitioning the CIFAR10 dataset for federated learning."""
 
-    
-    Args:
-        root (str): Path to download raw dataset.
-        path (str): Path to save partitioned subdataset.
-        dataname (str): "cifar10" or "cifar100"
-        num_clients (int): Number of clients.
-        download (bool): Whether to download the raw dataset.
-        preprocess (bool): Whether to preprocess the dataset.
-        balance (bool, optional): Balanced partition over all clients or not. Default as ``True``.
-        partition (str, optional): Partition type, only ``"iid"``, ``shards``, ``"dirichlet"`` are supported. Default as ``"iid"``.
-        unbalance_sgm (float, optional): Log-normal distribution variance for unbalanced data partition over clients. Default as ``0`` for balanced partition.
-        num_shards (int, optional): Number of shards in non-iid ``"shards"`` partition. Only works if ``partition="shards"``. Default as ``None``.
-        dir_alpha (float, optional): Dirichlet distribution parameter for non-iid partition. Only works if ``partition="dirichlet"``. Default as ``None``.
-        verbose (bool, optional): Whether to print partition process. Default as ``True``.
-        seed (int, optional): Random seed. Default as ``None``.
-        transform (callable, optional): A function/transform that takes in an PIL image and returns a transformed version.
-        target_transform (callable, optional): A function/transform that takes in the target and transforms it.
-    """
-    def __init__(self,
-                 root,
-                 path,
-                 dataname,
-                 num_clients,
-                 download=True,
-                 preprocess=False,
-                 balance=True,
-                 partition="iid",
-                 unbalance_sgm=0,
-                 num_shards=None,
-                 dir_alpha=None,
-                 verbose=True,
-                 seed=None,
-                 transform=None,
-                 target_transform=None) -> None:
+    def __init__(
+        self,
+        root,
+        path,
+        dataname,
+        num_clients,
+        download=True,
+        preprocess=False,
+        balance=True,
+        partition="iid",
+        unbalance_sgm=0,
+        num_shards=None,
+        dir_alpha=None,
+        verbose=True,
+        seed=None,
+        transform=None,
+        target_transform=None,
+    ) -> None:
+        """Initialize PartitionedCIFAR10."""
         self.dataname = dataname
         self.root = os.path.expanduser(root)
         self.path = path
         self.num_clients = num_clients
         self.transform = transform
-        self.targt_transform = target_transform
-        self.targets = None
-        
+        self.target_transform = target_transform
+        self.targets_train = None
+        self.targets_test = None
+
         if preprocess:
-            self.preprocess(balance=balance,
-                            partition=partition,
-                            unbalance_sgm=unbalance_sgm,
-                            num_shards=num_shards,
-                            dir_alpha=dir_alpha,
-                            verbose=verbose,
-                            seed=seed,
-                            download=download)
+            self.preprocess(
+                balance=balance,
+                partition=partition,
+                unbalance_sgm=unbalance_sgm,
+                num_shards=num_shards,
+                dir_alpha=dir_alpha,
+                verbose=verbose,
+                seed=seed,
+                download=download,
+            )
 
-    def preprocess(self,
-                   balance=True,
-                   partition="iid",
-                   unbalance_sgm=0,
-                   num_shards=None,
-                   dir_alpha=None,
-                   verbose=True,
-                   seed=None,
-                   download=True):
-        """Perform FL partition on the dataset, and save each subset for each client into ``data{cid}.pkl`` file.
-
-        For details of partition schemes, please check `Federated Dataset and DataPartitioner <https://fedlab.readthedocs.io/en/master/tutorials/dataset_partition.html>`_.
-        """
+    def preprocess(
+        self,
+        balance=True,
+        partition="iid",
+        unbalance_sgm=0,
+        num_shards=None,
+        dir_alpha=None,
+        verbose=True,
+        seed=None,
+        download=True,
+    ):
+        """Perform FL partition on the dataset."""
         self.download = download
 
         if os.path.exists(self.path) is not True:
             os.mkdir(self.path)
             os.mkdir(os.path.join(self.path, "train"))
-            os.mkdir(os.path.join(self.path, "var"))
             os.mkdir(os.path.join(self.path, "test"))
-        # train dataset partitioning
-        trainset = torchvision.datasets.CIFAR10(root=self.root,
-                                                train=True,
-                                                transform=self.transform,
-                                                download=self.download)
-        
-        self.targets = trainset.targets
 
-        partitioner = CIFAR10Partitioner(trainset.targets,
-                                         self.num_clients,
-                                         balance=balance,
-                                         partition=partition,
-                                         unbalance_sgm=unbalance_sgm,
-                                         num_shards=num_shards,
-                                         dir_alpha=dir_alpha,
-                                         verbose=verbose,
-                                         seed=seed)
+        # train and test dataset partitioning
+        trainset = torchvision.datasets.CIFAR10(
+            root=self.root,
+            train=True,
+            transform=self.transform,
+            download=self.download,
+        )
+        testset = torchvision.datasets.CIFAR10(
+            root=self.root,
+            train=False,
+            transform=self.transform,
+            download=self.download,
+        )
 
-        self.data_indices = partitioner.client_dict
-        self.n_classes = partitioner.num_classes
-        
-        samples, labels = [], []
+        self.targets_train = trainset.targets
+        self.targets_test = testset.targets
+
+        partitioner_train = CIFAR10Partitioner(
+            trainset.targets,
+            self.num_clients,
+            balance=balance,
+            partition=partition,
+            unbalance_sgm=unbalance_sgm,
+            num_shards=num_shards,
+            dir_alpha=dir_alpha,
+            verbose=verbose,
+            seed=seed,
+        )
+        partitioner_test = CIFAR10Partitioner(
+            testset.targets,
+            self.num_clients,
+            balance=balance,
+            partition=partition,
+            unbalance_sgm=unbalance_sgm,
+            num_shards=num_shards,
+            dir_alpha=dir_alpha,
+            verbose=verbose,
+            seed=seed,
+        )
+
+        self.data_indices_train = partitioner_train.client_dict
+        self.data_indices_test = partitioner_test.client_dict
+
+        samples_train, labels_train = [], []
+        samples_test, labels_test = [], []
+
         for x, y in trainset:
-            samples.append(x)
-            labels.append(y)
-        for id, indices in self.data_indices.items():
-            data, label = [], []
-            for idx in indices:
-                x, y = samples[idx], labels[idx]
-                data.append(x)
-                label.append(y)
-            dataset = BaseDataset(data, label)
+            samples_train.append(x)
+            labels_train.append(y)
+
+        for x, y in testset:
+            samples_test.append(x)
+            labels_test.append(y)
+
+        for cid_train, indices_train in self.data_indices_train.items():
+            data_train, label_train = [], []
+            for idx in indices_train:
+                x_train, y_train = samples_train[idx], labels_train[idx]
+                data_train.append(x_train)
+                label_train.append(y_train)
+            dataset_train = BaseDataset(data_train, label_train)
             torch.save(
-                dataset,
-                os.path.join(self.path, "train", "data{}.pkl".format(id)))
+                dataset_train,
+                os.path.join(self.path, "train", f"data{cid_train}.pkl"),
+            )
+
+        for cid_test, indices_test in self.data_indices_test.items():
+            data_test, label_test = [], []
+            for idx in indices_test:
+                x_test, y_test = samples_test[idx], labels_test[idx]
+                data_test.append(x_test)
+                label_test.append(y_test)
+            dataset_test = BaseDataset(data_test, label_test)
+            torch.save(
+                dataset_test,
+                os.path.join(self.path, "test", f"data{cid_test}.pkl"),
+            )
 
     def get_dataset(self, cid, type="train"):
-        """Load subdataset for client with client ID ``cid`` from local file.
-
-        Args:
-             cid (int): client id
-             type (str, optional): Dataset type, can be ``"train"``, ``"val"`` or ``"test"``. Default as ``"train"``.
-
-        Returns:
-            Dataset
-        """
+        """Load subdataset for client with client ID ``cid`` from local file."""
         dataset = torch.load(
-            os.path.join(self.path, type, "data{}.pkl".format(cid)))
+            os.path.join(self.path, type, f"data{cid}.pkl")
+        )
         return dataset
 
     def get_dataloader(self, cid, batch_size=None, type="train"):
-        """Return dataload for client with client ID ``cid``.
-
-        Args:
-            cid (int): client id
-            batch_size (int, optional): batch size in DataLoader.
-            type (str, optional): Dataset type, can be ``"train"``, ``"val"`` or ``"test"``. Default as ``"train"``.
-        """
+        """Return dataload for client with client ID ``cid``."""
         dataset = self.get_dataset(cid, type)
         batch_size = len(dataset) if batch_size is None else batch_size
         data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         return data_loader
+

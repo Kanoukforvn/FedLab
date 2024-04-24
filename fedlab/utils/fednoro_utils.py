@@ -212,13 +212,13 @@ def set_seed(seed):
 
 
 def set_output_files(args):
-    outputs_dir = 'outputs_' + str(args.dataset) + '_' + str(
+    outputs_dir = 'outputs_' + str(args.dataname) + '_' + str(
         args.level_n_system) + '_' + str(args.level_n_lowerb) + '_' + str(args.level_n_upperb)
     if not os.path.exists(outputs_dir):
         os.mkdir(outputs_dir)
     exp_dir = os.path.join(outputs_dir, args.exp + '_' +
                            str(args.level_n_system) + '_' + str(args.level_n_lowerb) + '_' +
-                           str(args.level_n_upperb) + '_' + str(args.local_ep))
+                           str(args.level_n_upperb) + '_' + str(args.epochs))
     if not os.path.exists(exp_dir):
         os.mkdir(exp_dir)
     models_dir = os.path.join(exp_dir, 'models')

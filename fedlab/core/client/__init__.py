@@ -16,4 +16,4 @@ ORDINARY_TRAINER = 0
 SERIAL_TRAINER = 1
 
 from .manager import ClientManager, ActiveClientManager, PassiveClientManager
-from .trainer import ClientTrainer
+from .trainer import ClientTrainer, SerialClientTrainer
