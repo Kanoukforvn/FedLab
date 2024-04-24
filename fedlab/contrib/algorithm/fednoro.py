@@ -139,7 +139,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             batch_loss = []
 
             for _, (images, labels) in enumerate(data_loader):
-                images, labels = images.to(model.device), labels.to(model.device)
+                images, labels = images.to(self.device), labels.to(self.device)
 
                 optimizer.zero_grad()
                 logits = model(images)
@@ -192,4 +192,4 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.iteration += 1
 
         # Return serialized model parameters and average loss
-        return [SerializationTool.serialize_model(self._model), avg_epoch_loss]
+        return [SerializationTool.serialize_model(self._model, cpu=False), avg_epoch_loss]
