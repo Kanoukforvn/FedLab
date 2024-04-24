@@ -31,6 +31,7 @@ class PartitionedCIFAR10(FedDataset):
         path,
         dataname,
         num_clients,
+        num_classes,
         download=True,
         preprocess=False,
         balance=True,
@@ -48,6 +49,7 @@ class PartitionedCIFAR10(FedDataset):
         self.root = os.path.expanduser(root)
         self.path = path
         self.num_clients = num_clients
+        self.num_classes = num_classes
         self.transform = transform
         self.target_transform = target_transform
         self.targets_train = None

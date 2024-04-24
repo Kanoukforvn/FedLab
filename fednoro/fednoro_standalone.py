@@ -10,6 +10,8 @@ from collections import Counter
 import numpy as np
 import torch.nn as nn
 
+from tensorboardX import SummaryWriter
+
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix
 
 sys.path.append("../")
@@ -24,7 +26,8 @@ from fedlab.models.mlp import MLP
 from fedlab.models.build_model import build_model
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files
-from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainerS1, globaltest
+from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainerS1, FedAvgServerHandler, globaltest
+from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 args = Munch
 
@@ -32,7 +35,7 @@ args.total_client = 10
 args.alpha = 0.5
 args.seed = 42
 args.preprocess = True
-args.cuda = True
+args.cuda = False
 args.dataname = "cifar10"
 args.model = "Resnet18"
 args.pretrained = 1
@@ -41,8 +44,8 @@ args.num_users = args.total_client
 if args.dataname == "cifar10":
     args.n_classes = 10
 
-args.device = "cuda" if torch.cuda.is_available() else "cpu"
-#args.device = "cpu"
+#args.device = "cuda" if torch.cuda.is_available() else "cpu"
+args.device = "cpu"
 
 # We provide a example usage of patitioned CIFAR10 dataset
 # Download raw CIFAR10 dataset and partition them according to given configuration
@@ -59,7 +62,8 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   path="../datasets/cifar10/fedcifar10/",
                                   dataname=args.dataname,
                                   num_clients=args.total_client,
-                                  partition="iid",
+                                  num_classes=args.n_classes,
+                                  partition="dirichlet",
                                   dir_alpha=args.alpha,
                                   seed=args.seed,
                                   preprocess=args.preprocess,
@@ -163,13 +167,16 @@ args.com_round = 10
 args.sample_ratio = 0.1
 args.cuda = False
 
+tensorboard_dir = os.path.join('fednoro', 'tensorboard')
+
+writer = SummaryWriter(tensorboard_dir)
+
 trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
 from fedlab.utils.functional import evaluate
 from fedlab.core.standalone import StandalonePipeline
-from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
 
@@ -224,6 +231,7 @@ class EvalPipeline(StandalonePipeline):
 
         plt.savefig(f"./imgs/cifar10_dir_loss_accuracy_s1.png", dpi=400, bbox_inches = 'tight')
         
+        
 
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=False,
@@ -234,6 +242,9 @@ test_loader = DataLoader(test_data, batch_size=1024)
 eval_pipeline = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
 eval_pipeline.main()
 eval_pipeline.show()
+
+model_path = os.path.join("model", "s1_model_params.pth")
+torch.save(model.state_dict(), model_path)
 
 """
 # trainer = SGDClientTrainer(model, cuda=True) # single trainer
