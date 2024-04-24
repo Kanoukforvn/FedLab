@@ -4,9 +4,9 @@ import torch.nn.functional as F
 
 
 class LogitAdjust(nn.Module):
-    def __init__(self, cls_num_list, tau=1, weight=None, device='cuda'):
+    def __init__(self, cls_num_list, tau=1, weight=None):
         super(LogitAdjust, self).__init__()
-        cls_num_list = torch.tensor(cls_num_list, dtype=torch.float64) #FIXME device argument
+        cls_num_list = torch.tensor(cls_num_list, dtype=torch.float64, device='cuda') #FIXME device argument
         cls_p_list = cls_num_list / cls_num_list.sum()
         m_list = tau * torch.log(cls_p_list)
         self.m_list = m_list.view(1, -1)
@@ -14,13 +14,13 @@ class LogitAdjust(nn.Module):
 
     def forward(self, x, target):
         x_m = x + self.m_list
-        return F.cross_entropy(x_m, target, weight=self.weight, device='cuda')
+        return F.cross_entropy(x_m, target, weight=self.weight)
 
 
 class LA_KD(nn.Module):
     def __init__(self, cls_num_list, tau=1):
         super(LA_KD, self).__init__()
-        cls_num_list = torch.tensor(cls_num_list, dtype=torch.float64) #FIXME device argument
+        cls_num_list = torch.tensor(cls_num_list, dtype=torch.float64, device='cuda') #FIXME device argument
         cls_p_list = cls_num_list / cls_num_list.sum()
         m_list = tau * torch.log(cls_p_list)
         self.m_list = m_list.view(1, -1)
