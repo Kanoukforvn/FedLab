@@ -17,7 +17,7 @@ import torch
 
 class SerializationTool(object):
     @staticmethod
-    def serialize_model_gradients(model: torch.nn.Module, cpu:bool=True) -> torch.Tensor:
+    def serialize_model_gradients(model: torch.nn.Module, cpu:bool=False) -> torch.Tensor:
         """Vectorize model gradients.
 
         Args:
@@ -51,7 +51,7 @@ class SerializationTool(object):
             idx += layer_size
 
     @staticmethod
-    def serialize_model(model: torch.nn.Module, cpu:bool=True) -> torch.Tensor:
+    def serialize_model(model: torch.nn.Module, cpu:bool=False) -> torch.Tensor:
         """Unfold model parameters, including trainable as well as untrainable parameters.
         
         Unfold every layer of model, concate all of tensors into one vector.
@@ -109,7 +109,7 @@ class SerializationTool(object):
 
 
     @staticmethod
-    def serialize_trainable_model(model: torch.nn.Module, cpu:bool=True) -> torch.Tensor:
+    def serialize_trainable_model(model: torch.nn.Module, cpu:bool=False) -> torch.Tensor:
         """Unfold trainable model parameters.
         
         Unfold every layer of model by iterating though ``model.parameters()``,  then concate all of tensors into one vector.
