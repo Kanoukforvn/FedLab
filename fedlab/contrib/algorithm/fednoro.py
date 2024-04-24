@@ -139,12 +139,15 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             batch_loss = []
 
             for _, (images, labels) in enumerate(data_loader):
-                images, labels = images.to(self.device), labels.to(self.device)
+                images, labels = images.to(model.device), labels.to(model.device)
+
                 optimizer.zero_grad()
                 logits = model(images)
                 loss = ce_criterion(logits, labels)
+
                 loss.backward()
                 optimizer.step()
+
                 batch_loss.append(loss.item())
 
             epoch_loss.append(sum(batch_loss) / len(batch_loss))
