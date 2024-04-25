@@ -155,8 +155,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
 
             epoch_loss.append(sum(batch_loss) / len(batch_loss))
 
-        avg_loss = sum(epoch_loss) / len(epoch_loss)
-        return model.state_dict(), avg_loss
+        return model.state_dict(), np.array(epoch_loss).mean()
 
     def train_warmup(self, model_parameters, train_loader):
         """Warm-up phase training using FedAvg.
