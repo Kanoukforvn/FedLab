@@ -42,6 +42,7 @@ class FedAvgServerHandler(SyncServerHandler):
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
+        assert all(weight >= 0 for weight in weights), "weights should be non-negative values"
         serialized_parameters = Aggregators.fedavg_aggregate(parameters_list, weights)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
@@ -116,6 +117,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
             if self.iteration < self.warmup_rounds:
                 w_local, loss_local = self.train_LA(self.model, data_loader)
+                print("w_local = ",w_local)
                 pack = [w_local, loss_local]
             self.cache.append(pack)
 
