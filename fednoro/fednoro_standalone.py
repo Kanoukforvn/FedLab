@@ -202,6 +202,7 @@ class EvalPipeline(StandalonePipeline):
         self.test_loader = test_loader
         self.loss = []
         self.acc = []
+        self.best_performance = 0
         
     def main(self):
         t = 0
