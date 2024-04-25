@@ -166,7 +166,7 @@ args.com_round = 10
 args.cuda = True
 args.sample_ratio = 0.1
 
-trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, args.cuda)
+trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 

@@ -43,7 +43,7 @@ class FedAvgServerHandler(SyncServerHandler):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
         serialized_parameters = Aggregators.fedavg_aggregate(parameters_list, weights)
-        SerializationTool.deserialize_model(self._model, serialized_parameters, cpu=False)
+        SerializationTool.deserialize_model(self._model, serialized_parameters)
 
 
 ##################
@@ -51,7 +51,7 @@ class FedAvgServerHandler(SyncServerHandler):
 #      Client
 #
 ##################
-
+        
 class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
     """
     Train multiple clients in a single process using FedNoRo algorithm with warm-up phase.
@@ -60,7 +60,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         model (torch.nn.Module): Model used in this federation.
         num_clients (int): Number of clients in current trainer.
         cuda (bool): Use GPUs or not. Default: ``False``.
-        device (str, optional): Assign model/data to the given GPUs. E.g., 'device:0' or 'device:0,1'. Defaults to None.
+        device (str, optional): Assign model/data to the given GPUs. E.g., 'cuda:0' or 'cuda:0,1'. Defaults to None.
         logger (Logger, optional): Object of :class:`Logger`.
         personal (bool, optional): If True is passed, SerialModelMaintainer will generate the copy of local parameters list and maintain them respectively. These parameters are indexed by [0, num-1]. Defaults to False.
         warmup_rounds (int): Number of warm-up rounds for FedAvg.
@@ -69,7 +69,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         lr (float): Learning rate for FedNoRo algorithm.
         epochs (int): Number of epochs for FedNoRo algorithm.
     """
-    def __init__(self, model, num_clients, cuda, device=None, logger=None, personal=False,
+    def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
                  warmup_rounds=1, lr_warmup=0.01, epochs_warmup=1, lr=0.01, epochs=10) -> None:
         super().__init__(model, num_clients, cuda, device, personal)
         self._LOGGER = logger if logger is not None else Logger()
@@ -116,7 +116,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             progress_bar.set_description(f"Training on client {id}", refresh=True)
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
             if self.iteration < self.warmup_rounds:
-                w_local, loss_local = self.train_LA(self.model, data_loader)
+                w_local, loss_local = self.train_LA(self.model.to(self.device), data_loader)
                 pack = [w_local, loss_local]
             self.cache.append(pack)
         
@@ -192,4 +192,4 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.iteration += 1
 
         # Return serialized model parameters and average loss
-        return [SerializationTool.serialize_model(self._model, cpu=False), avg_epoch_loss]
+        return [SerializationTool.serialize_model(self._model), avg_epoch_loss]
