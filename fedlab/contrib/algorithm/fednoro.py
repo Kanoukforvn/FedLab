@@ -102,7 +102,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             progress_bar.set_description(f"Training on client {id}", refresh=True)
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
             if self.iteration < self.warmup_rounds:
-                w_local, loss_local = self.train_warmup(model_parameters.cuda(self.device), data_loader)
+                w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
                 pack = [w_local, loss_local]
             else:
                 pack=None
