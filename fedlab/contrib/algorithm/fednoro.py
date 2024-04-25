@@ -105,7 +105,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
                 w_local, loss_local = self.train_warmup(model_parameters.cuda(self.device), data_loader)
 
                 pack = [w_local, loss_local]
-                print(w_local)
+                logging.info(w_local)
             else:
                 pack=None
             self.cache.append(pack)
