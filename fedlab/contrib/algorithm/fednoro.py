@@ -44,7 +44,7 @@ class FedAvgServerHandler(SyncServerHandler):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
         serialized_parameters = Aggregators.fedavg_aggregate(parameters_list, weights)
-        SerializationTool.deserialize_model(self._model, serialized_parameters, cpu=False)
+        SerializationTool.deserialize_model(self._model, serialized_parameters)
 
 
 ##################
