@@ -180,7 +180,7 @@ trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
-from fedlab.utils.functional import evaluate
+from fedlab.utils.functional import evaluate, globaltest
 from fedlab.core.standalone import StandalonePipeline
 
 handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
@@ -196,10 +196,9 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score, confusion_m
 ############################################
 
 class EvalPipeline(StandalonePipeline):
-    def __init__(self, handler, trainer, test_loader, device = "cuda"):
+    def __init__(self, handler, trainer, test_loader):
         super().__init__(handler, trainer)
         self.test_loader = test_loader
-        self.device = device
         self.loss = []
         self.acc = []
         
@@ -225,7 +224,7 @@ class EvalPipeline(StandalonePipeline):
             self.acc.append(acc)
 
             pred = globaltest(copy.deepcopy(model).to(
-                self.device), dataset_test, self.test_loader.batch_size)
+                args.device), dataset_test, args.batch_size)
             acc = accuracy_score(fed_cifar10.targets_test, pred)
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
 

@@ -76,6 +76,21 @@ def evaluate(model, criterion, test_loader):
     return loss_.avg, acc_.avg
 
 
+
+def globaltest(model, test_loader, args):
+    model.eval()
+    pred = np.array([])
+    with torch.no_grad():
+        for images, labels in test_loader:
+            images = images.to(args.device)
+            labels = labels.to(args.device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            pred = np.concatenate([pred, predicted.detach().cpu().numpy()], axis=0)
+    return pred
+
+
+
 def read_config_from_json(json_file: str, user_name: str):
     """Read config from `json_file` to get config for `user_name`
 

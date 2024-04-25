@@ -30,7 +30,6 @@ def globaltest(model, test_dataset, args):
             pred = np.concatenate([pred, predicted.detach().cpu().numpy()], axis=0)
     return pred
 
-
 ##################
 #
 #      Server
