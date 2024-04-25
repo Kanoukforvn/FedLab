@@ -122,7 +122,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             self.cache.append(pack)
 
 
-    def train_LA(self, model, data_loader):
+    def train_LA(self, model_parameters, data_loader):
         """Train the local model using LogitAdjust.
 
         Args:
@@ -132,8 +132,11 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         Returns:
             tuple: A tuple containing the updated model state_dict and the average loss.
         """
-        model.train()
-        optimizer = torch.optim.SGD(model.parameters(), lr=self.lr, momentum=0.5)
+        
+        self.set_model(model_parameters)
+        self._model.train()
+
+        optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
         ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class())
         epoch_loss = []
 
@@ -145,7 +148,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
                 images, labels = images.cuda(self.device), labels.cuda(self.device)
 
                 optimizer.zero_grad()
-                logits = model(images)
+                logits = self._model(images)
                 loss = ce_criterion(logits, labels)
 
                 loss.backward()
@@ -155,7 +158,9 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
 
             epoch_loss.append(sum(batch_loss) / len(batch_loss))
 
-        return model.state_dict(), np.array(epoch_loss).mean()
+        avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
+
+        return [SerializationTool.serialize_model(self._model), avg_epoch_loss]
 
     def train_warmup(self, model_parameters, train_loader):
         """Warm-up phase training using FedAvg.
