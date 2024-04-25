@@ -231,7 +231,6 @@ class EvalPipeline(StandalonePipeline):
             print("bacc : ", bacc)
             # Save model if best performance
             if bacc > self.best_performance:
-                print("condition check")
                 self.best_performance = bacc
                 logging.info(f'Best balanced accuracy: {self.best_performance:.4f}')
 
@@ -240,10 +239,10 @@ class EvalPipeline(StandalonePipeline):
                 torch.save(self.handler.model.state_dict(), model_path)
                 logging.info(f'Saved model state_dict to: {model_path}')
 
-            t += 1
+            
             self.loss.append(loss)
             self.acc.append(acc)
-
+            t += 1
 
     def show(self):
         plt.figure(figsize=(8, 4.5))
