@@ -80,9 +80,9 @@ dataloader_train = fed_cifar10.get_dataloader(0, batch_size=128, type="train")
 dataloader_test = fed_cifar10.get_dataloader(0, batch_size=128, type="test")
 
 logging.info(
-    f"train: {Counter(dataset_train.targets)}, total: {len(dataset_train.targets)}")
+    f"train: {Counter(fed_cifar10.targets_train)}, total: {len(fed_cifar10.targets_train)}")
 logging.info(
-    f"test: {Counter(dataset_test.targets)}, total: {len(dataset_test.targets)}")
+    f"test: {Counter(fed_cifar10.targets_test)}, total: {len(fed_cifar10.targets_test)}")
 
 
 ############################################
