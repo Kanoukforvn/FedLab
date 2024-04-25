@@ -69,7 +69,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         lr (float): Learning rate for FedNoRo algorithm.
         epochs (int): Number of epochs for FedNoRo algorithm.
     """
-    def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
+    def __init__(self, model, num_clients, cuda, device=None, logger=None, personal=False,
                  warmup_rounds=1, lr_warmup=0.01, epochs_warmup=1, lr=0.01, epochs=10) -> None:
         super().__init__(model, num_clients, cuda, device, personal)
         self._LOGGER = logger if logger is not None else Logger()
