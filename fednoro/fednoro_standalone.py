@@ -169,7 +169,7 @@ args.cuda = True
 
 trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
-#trainer.setup_optim(args.epochs, args.batch_size, args.lr)
+trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
 from fedlab.utils.functional import evaluate
 from fedlab.core.standalone import StandalonePipeline
