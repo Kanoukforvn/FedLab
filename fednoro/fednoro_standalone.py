@@ -196,9 +196,10 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score, confusion_m
 ############################################
 
 class EvalPipeline(StandalonePipeline):
-    def __init__(self, handler, trainer, test_loader):
+    def __init__(self, handler, trainer, test_loader,args):
         super().__init__(handler, trainer)
         self.test_loader = test_loader
+        self.args = args
         self.loss = []
         self.acc = []
         
@@ -265,7 +266,7 @@ test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
 test_loader = DataLoader(test_data, batch_size=1024)
 
 # Run evaluation
-eval_pipeline = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
+eval_pipeline = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader,args=args)
 eval_pipeline.main()
 eval_pipeline.show()
 
