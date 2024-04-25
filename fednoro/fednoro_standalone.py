@@ -35,7 +35,6 @@ args.total_client = 10
 args.alpha = 0.5
 args.seed = 42
 args.preprocess = True
-args.cuda = True
 args.dataname = "cifar10"
 args.model = "Resnet18"
 args.pretrained = 1
@@ -164,9 +163,10 @@ args.epochs = 5
 args.batch_size = 128
 args.lr = 0.1
 args.com_round = 10
+args.cuda = True
 args.sample_ratio = 0.1
 
-trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
+trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
