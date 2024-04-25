@@ -116,7 +116,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             progress_bar.set_description(f"Training on client {id}", refresh=True)
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
             if self.iteration < self.warmup_rounds:
-                w_local, loss_local = self.train_warmup(model_parameters, data_loader)
+                w_local, loss_local = self.train_warmup(model_parameters.cuda(self.device), data_loader)
                 pack = [w_local, loss_local]
                 print("Weights:", w_local)
             self.cache.append(pack)
@@ -133,7 +133,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             tuple: A tuple containing the updated model state_dict and the average loss.
         """
         
-        self.set_model(model_parameters)
+        self.set_model(model_parameters.cuda(self.device))
         self._model.train()
 
         optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
@@ -172,7 +172,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         Returns:
             list: A list containing serialized model parameters and average loss.
         """
-        self.set_model(model_parameters)
+        self.set_model(model_parameters.cuda(self.device))
         self._model.train()
 
         # Set up optimizer with warm-up learning rate
