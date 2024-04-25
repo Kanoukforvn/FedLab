@@ -45,6 +45,7 @@ if args.dataname == "cifar10":
 
 #args.device = "cuda" if torch.cuda.is_available() else "cpu"
 args.device = "cuda"
+args.cuda = True
 
 # We provide a example usage of patitioned CIFAR10 dataset
 # Download raw CIFAR10 dataset and partition them according to given configuration
@@ -163,7 +164,6 @@ args.epochs = 5
 args.batch_size = 128
 args.lr = 0.1
 args.com_round = 10
-args.cuda = True
 args.sample_ratio = 0.1
 
 trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)

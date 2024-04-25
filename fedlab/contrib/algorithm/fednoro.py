@@ -79,7 +79,6 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.lr = lr
         self.epochs = epochs
         self.iteration = 0
-        self.device = device
 
     def setup_dataset(self, dataset):
         self.dataset = dataset
@@ -116,10 +115,10 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             progress_bar.set_description(f"Training on client {id}", refresh=True)
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
             if self.iteration < self.warmup_rounds:
-                w_local, loss_local = self.train_LA(self.model.to(self.device), data_loader)
+                w_local, loss_local = self.train_LA(self.model, data_loader)
                 pack = [w_local, loss_local]
             self.cache.append(pack)
-        
+
     def train_LA(self, model, data_loader):
         """Train the local model using LogitAdjust.
 
@@ -139,7 +138,8 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             batch_loss = []
 
             for _, (images, labels) in enumerate(data_loader):
-                images, labels = images.to(self.device), labels.to(self.device)
+
+                images, labels = images.cuda(self.device), labels.cuda(self.device)
 
                 optimizer.zero_grad()
                 logits = model(images)
