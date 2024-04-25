@@ -173,7 +173,7 @@ trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 from fedlab.utils.functional import evaluate
 from fedlab.core.standalone import StandalonePipeline
 
-handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
+handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
 
 from torch import nn
 from torch.utils.data import DataLoader
