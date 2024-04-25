@@ -29,6 +29,8 @@ from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files
 from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainerS1, FedAvgServerHandler, globaltest
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
+logging.basicConfig(level = logging.INFO)
+
 args = Munch
 
 args.total_client = 10
@@ -158,6 +160,8 @@ set_seed(args.seed)
 ############################################
 #           Stage 1 - Warm Up              #
 ############################################
+
+logging.info("\n ---------------------begin training---------------------")
 
 # client
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
