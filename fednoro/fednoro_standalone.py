@@ -165,11 +165,6 @@ args.batch_size = 128
 args.lr = 0.1
 args.com_round = 10
 args.sample_ratio = 0.1
-args.cuda = False
-
-tensorboard_dir = os.path.join('fednoro', 'tensorboard')
-
-writer = SummaryWriter(tensorboard_dir)
 
 trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)

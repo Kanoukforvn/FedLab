@@ -14,7 +14,6 @@ class LogitAdjust(nn.Module):
 
     def forward(self, x, target):
         device = x.device
-        print(device)
         x_m = x + self.m_list.to(device=device)
         return F.cross_entropy(x_m, target, weight=self.weight)
 
@@ -29,7 +28,6 @@ class LA_KD(nn.Module):
 
     def forward(self, x, target, soft_target, w_kd):
         device = x.device
-        print(device)
         x_m = x + self.m_list.to(device=device)
         log_pred = torch.log_softmax(x_m, dim=-1)
         log_pred = torch.where(torch.isinf(log_pred), torch.full_like(log_pred, 0), log_pred)
