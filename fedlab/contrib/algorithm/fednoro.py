@@ -184,7 +184,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
 
             # Training loop
             for data, target in train_loader:
-                data, target = data.to(self.device), target.to(self.device)
+                data, target = data.cuda(self.device), target.cuda(self.device)
                 optimizer.zero_grad()
                 output = self._model(data)
                 loss = self.criterion(output, target)
