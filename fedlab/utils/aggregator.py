@@ -37,10 +37,12 @@ class Aggregators(object):
         if not isinstance(weights, torch.Tensor):
             weights = torch.tensor(weights)
 
+
         # Move weights to the same device as the first tensor in serialized_params_list
         device = serialized_params_list[0].device
         weights = weights.to(device)
-
+        weights = torch.abs(weights)
+        
         weights = weights / torch.sum(weights)
         assert torch.all(weights >= 0), "weights should be non-negative values"
 
