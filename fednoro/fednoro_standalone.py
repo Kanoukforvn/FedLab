@@ -175,6 +175,7 @@ args.lr = 0.1
 args.com_round = 10
 args.sample_ratio = 0.1
 args.cuda = True
+args.device = "cuda"
 
 trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
@@ -199,8 +200,8 @@ class EvalPipeline(StandalonePipeline):
     def __init__(self, handler, trainer, test_loader,args):
         super().__init__(handler, trainer)
         self.test_loader = test_loader
-        self.args = args
         self.loss = []
+        self.args = args
         self.acc = []
         
     def main(self):
@@ -225,7 +226,7 @@ class EvalPipeline(StandalonePipeline):
             self.acc.append(acc)
 
             pred = globaltest(copy.deepcopy(model).to(
-                self.args.device), dataset_test, self.args.batch_size)
+                'cuda'), dataset_test, 1024)
             acc = accuracy_score(fed_cifar10.targets_test, pred)
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
 
@@ -266,7 +267,7 @@ test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
 test_loader = DataLoader(test_data, batch_size=1024)
 
 # Run evaluation
-eval_pipeline = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader,args=args)
+eval_pipeline = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader, args=args)
 eval_pipeline.main()
 eval_pipeline.show()
 
