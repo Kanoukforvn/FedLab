@@ -229,14 +229,15 @@ class EvalPipeline(StandalonePipeline):
                 'cuda'), self.test_loader, 'cuda')
             acc = accuracy_score(fed_cifar10.targets_test, pred)
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
-
+            print("bacc : ", bacc)
             # Save model if best performance
             if bacc > self.best_performance:
+                print("condition check")
                 self.best_performance = bacc
                 logging.info(f'Best balanced accuracy: {self.best_performance:.4f}')
 
                 # Save model state_dict
-                model_path = f'model/stage1_model_{t}.pth'
+                model_path = f'fednoro/stage1_model_{t}.pth'
                 torch.save(self.handler.model.state_dict(), model_path)
                 logging.info(f'Saved model state_dict to: {model_path}')
 
