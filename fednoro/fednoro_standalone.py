@@ -196,9 +196,10 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score, confusion_m
 ############################################
 
 class EvalPipeline(StandalonePipeline):
-    def __init__(self, handler, trainer, test_loader):
+    def __init__(self, handler, trainer, test_loader, device = "cuda"):
         super().__init__(handler, trainer)
-        self.test_loader = test_loader 
+        self.test_loader = test_loader
+        self.device = device
         self.loss = []
         self.acc = []
         
@@ -224,9 +225,9 @@ class EvalPipeline(StandalonePipeline):
             self.acc.append(acc)
 
             pred = globaltest(copy.deepcopy(model).to(
-                args.device), dataset_test, args)
-            acc = accuracy_score(dataset_test.targets, pred)
-            bacc = balanced_accuracy_score(dataset_test.targets, pred)
+                self.device), dataset_test, self.test_loader.batch_size)
+            acc = accuracy_score(fed_cifar10.targets_test, pred)
+            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
 
             # Save model if best performance
             if bacc > self.best_performance:
