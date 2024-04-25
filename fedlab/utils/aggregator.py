@@ -43,7 +43,6 @@ class Aggregators(object):
         weights = weights.to(device)
         weights = torch.abs(weights)
         
-        weights = weights / torch.sum(weights)
         assert torch.all(weights >= 0), "weights should be non-negative values"
 
         # Move all tensors in serialized_params_list to the same device as weights
