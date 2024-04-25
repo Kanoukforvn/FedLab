@@ -11,6 +11,7 @@ class LogitAdjust(nn.Module):
         m_list = tau * torch.log(cls_p_list)
         self.m_list = m_list.view(1, -1).to(device=torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         self.weight = weight
+        print(weight)
 
     def forward(self, x, target):
         device = x.device

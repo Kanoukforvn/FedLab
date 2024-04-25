@@ -94,6 +94,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         for idx in self.dataset.data_indices_train:
             label = self.dataset.targets_train[idx]
             class_sum[label] += 1
+        print(class_sum)
         return class_sum
 
     def local_process(self, payload, id_list):
