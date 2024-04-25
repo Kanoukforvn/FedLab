@@ -44,7 +44,7 @@ class FedAvgServerHandler(SyncServerHandler):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
         serialized_parameters = Aggregators.fedavg_aggregate(parameters_list, weights)
-        SerializationTool.deserialize_model(self._model, serialized_parameters)
+        SerializationTool.deserialize_model(self._model, serialized_parameters, cpu=False)
 
 
 ##################
@@ -172,6 +172,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         Returns:
             list: A list containing serialized model parameters and average loss.
         """
+        # Deserialize model parameters and move them to the GPU device
         self.set_model(model_parameters.cuda(self.device))
         self._model.train()
 
@@ -199,4 +200,4 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.iteration += 1
 
         # Return serialized model parameters and average loss
-        return [SerializationTool.serialize_model(self._model), avg_epoch_loss]
+        return [SerializationTool.serialize_model(self._model, cpu=False), avg_epoch_loss]
