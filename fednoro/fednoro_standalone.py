@@ -189,6 +189,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 import torchvision
 
+from sklearn.metrics import accuracy_score, balanced_accuracy_score, confusion_matrix
 
 ############################################
 #      Stage 1 - Evaluation Pipeline       #
@@ -216,12 +217,32 @@ class EvalPipeline(StandalonePipeline):
             for pack in uploads:
                 self.handler.load(pack)
 
-            loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
+            loss, acc, bacc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
             print("Round {}, Loss {:.4f}, Test Accuracy {:.4f}".format(t, loss, acc))
             t += 1
             self.loss.append(loss)
             self.acc.append(acc)
-    
+
+            pred = globaltest(copy.deepcopy(model).to(
+                args.device), dataset_test, args)
+            acc = accuracy_score(dataset_test.targets, pred)
+            bacc = balanced_accuracy_score(dataset_test.targets, pred)
+
+            # Save model if best performance
+            if bacc > self.best_performance:
+                self.best_performance = bacc
+                logging.info(f'Best balanced accuracy: {self.best_performance:.4f}')
+
+                # Save model state_dict
+                model_path = f'{self.models_dir}/stage1_model_{t}.pth'
+                torch.save(self.handler.model.state_dict(), model_path)
+                logging.info(f'Saved model state_dict to: {model_path}')
+
+            t += 1
+            self.loss.append(loss)
+            self.acc.append(acc)
+
+
     def show(self):
         plt.figure(figsize=(8, 4.5))
         ax = plt.subplot(1, 2, 1)
