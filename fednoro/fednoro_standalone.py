@@ -79,6 +79,11 @@ dataset_test = fed_cifar10.get_dataset(0, type="test")
 dataloader_train = fed_cifar10.get_dataloader(0, batch_size=128, type="train")
 dataloader_test = fed_cifar10.get_dataloader(0, batch_size=128, type="test")
 
+logging.info(
+    f"train: {Counter(dataset_train.targets)}, total: {len(dataset_train.targets)}")
+logging.info(
+    f"test: {Counter(dataset_test.targets)}, total: {len(dataset_test.targets)}")
+
 
 ############################################
 #           Dataset visualization          #
