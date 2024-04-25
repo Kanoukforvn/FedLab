@@ -39,7 +39,7 @@ def get_model(model_name, pretrained=False):
     elif model_name == 'Vgg19':
         return models.vgg19(pretrained=pretrained)
     elif model_name == 'Resnet18':
-        return models.resnet18(pretrained=pretrained)
+        return models.resnet18(weights='ResNet18_Weights.DEFAULT')
     elif model_name == 'Resnet34':
         return models.resnet34(pretrained=pretrained)
     elif model_name == 'Resnet50':
