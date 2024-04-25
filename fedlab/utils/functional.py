@@ -77,13 +77,13 @@ def evaluate(model, criterion, test_loader):
 
 
 
-def globaltest(model, test_loader):
+def globaltest(model, test_loader, device):
     model.eval()
     pred = np.array([])
     with torch.no_grad():
         for images, labels in test_loader:
-            images = images.to('cuda')
-            labels = labels.to('cuda')
+            images = images.to(device)
+            labels = labels.to(device)
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             pred = np.concatenate([pred, predicted.detach().cpu().numpy()], axis=0)
