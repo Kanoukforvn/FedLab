@@ -221,7 +221,6 @@ class EvalPipeline(StandalonePipeline):
 
             loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
             print("Round {}, Loss {:.4f}, Test Accuracy {:.4f}".format(t, loss, acc))
-            t += 1
             self.loss.append(loss)
             self.acc.append(acc)
 
