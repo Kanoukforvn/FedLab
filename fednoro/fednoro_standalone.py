@@ -39,12 +39,13 @@ args.dataname = "cifar10"
 args.model = "Resnet18"
 args.pretrained = 1
 args.num_users = args.total_client
+#args.device = "cuda" if torch.cuda.is_available() else "cpu"
+args.device = "cuda"
+
 
 if args.dataname == "cifar10":
     args.n_classes = 10
 
-#args.device = "cuda" if torch.cuda.is_available() else "cpu"
-args.device = "cuda"
 
 # We provide a example usage of patitioned CIFAR10 dataset
 # Download raw CIFAR10 dataset and partition them according to given configuration

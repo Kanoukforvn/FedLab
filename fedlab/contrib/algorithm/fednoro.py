@@ -8,6 +8,7 @@ from fedlab.contrib.algorithm import SyncServerHandler, SGDSerialClientTrainer
 from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust
 
 import logging
+import copy
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -115,7 +116,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             progress_bar.set_description(f"Training on client {id}", refresh=True)
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
             if self.iteration < self.warmup_rounds:
-                w_local, loss_local = self.train_LA(self.model, data_loader)
+                w_local, loss_local = self.train_LA(model=copy.deepcopy(self.model).to(self.device), data_loader=data_loader)
                 pack = [w_local, loss_local]
                 print("Weights:", w_local)
             self.cache.append(pack)
