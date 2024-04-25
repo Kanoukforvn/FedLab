@@ -17,19 +17,6 @@ import numpy as np
 from typing import List
 import numpy as np
 
-def globaltest(model, test_dataset, args):
-    model.eval()
-    test_loader = DataLoader(dataset=test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=2)
-    pred = np.array([])
-    with torch.no_grad():
-        for images, labels in test_loader:
-            images = images.to(args.device)
-            labels = labels.to(args.device)
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-            pred = np.concatenate([pred, predicted.detach().cpu().numpy()], axis=0)
-    return pred
-
 ##################
 #
 #      Server
