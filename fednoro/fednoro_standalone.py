@@ -26,7 +26,7 @@ from fedlab.models.mlp import MLP
 from fedlab.models.build_model import build_model
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files
-from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainerS1, FedAvgServerHandler, globaltest
+from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainerS1, FedAvgServerHandler
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 logging.basicConfig(level = logging.INFO)
