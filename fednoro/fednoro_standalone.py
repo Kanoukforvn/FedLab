@@ -225,7 +225,7 @@ class EvalPipeline(StandalonePipeline):
             self.acc.append(acc)
 
             pred = globaltest(copy.deepcopy(model).to(
-                args.device), dataset_test, args.batch_size)
+                self.args.device), dataset_test, self.args.batch_size)
             acc = accuracy_score(fed_cifar10.targets_test, pred)
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
 
