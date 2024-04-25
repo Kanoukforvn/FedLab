@@ -71,10 +71,10 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         epochs (int): Number of epochs for FedNoRo algorithm.
     """
     def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
-                 warmup_rounds=1, lr_warmup=0.01, epochs_warmup=1, lr=0.01, epochs=10) -> None:
+                 warmup_rounds=10, lr_warmup=0.01, epochs_warmup=1, lr=0.01, epochs=10) -> None:
         super().__init__(model, num_clients, cuda, device, personal)
         self._LOGGER = logger if logger is not None else Logger()
-        self.warmup_rounds = warmup_rounds
+        self.warmup_rounds = warmup_rounds #FIXME link warmup round with com round
         self.lr_warmup = lr_warmup
         self.epochs_warmup = epochs_warmup
         self.lr = lr
@@ -119,6 +119,8 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
                 w_local, loss_local = self.train_warmup(model_parameters.cuda(self.device), data_loader)
                 pack = [w_local, loss_local]
                 print("Weights:", w_local)
+            else:
+                pack=None
             self.cache.append(pack)
 
 
