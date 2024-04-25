@@ -236,7 +236,7 @@ class EvalPipeline(StandalonePipeline):
                 logging.info(f'Best balanced accuracy: {self.best_performance:.4f}')
 
                 # Save model state_dict
-                model_path = f'{self.models_dir}/stage1_model_{t}.pth'
+                model_path = f'fednoro/model/stage1_model_{t}.pth'
                 torch.save(self.handler.model.state_dict(), model_path)
                 logging.info(f'Saved model state_dict to: {model_path}')
 
