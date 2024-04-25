@@ -117,7 +117,9 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             if self.iteration < self.warmup_rounds:
                 w_local, loss_local = self.train_LA(self.model, data_loader)
                 pack = [w_local, loss_local]
+                print("Weights:", w_local)
             self.cache.append(pack)
+
 
     def train_LA(self, model, data_loader):
         """Train the local model using LogitAdjust.
