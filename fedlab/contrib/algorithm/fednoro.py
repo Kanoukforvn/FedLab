@@ -87,7 +87,6 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.ce_criterion = LogitAdjust(cls_num_list)
         print(
             f'client{id} each class num: {cls_num_list}')
-        
 
     def get_num_of_each_class(self):
         class_sum = np.array([0] * self.dataset.num_classes)
@@ -95,7 +94,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             label = self.dataset.targets_train[idx]
             class_sum[label] += 1
         return class_sum.tolist()
-    
+
     def local_process(self, payload, id_list):
         model_parameters = payload[0]
         w_local, loss_local = [], []
