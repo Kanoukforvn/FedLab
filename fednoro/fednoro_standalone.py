@@ -197,6 +197,10 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score, confusion_m
 #      Stage 1 - Evaluation Pipeline       #
 ############################################
 
+label_counts_per_client = trainer.get_num_of_each_class(fed_cifar10)
+for client_index, label_counts in enumerate(label_counts_per_client):
+    print(f"Client {client_index} label counts: {label_counts}")
+
 class EvalPipeline(StandalonePipeline):
     def __init__(self, handler, trainer, test_loader):
         super().__init__(handler, trainer)

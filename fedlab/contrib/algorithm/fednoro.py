@@ -13,6 +13,7 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
+from collections import Counter
 
 from typing import List
 import numpy as np
@@ -83,18 +84,31 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.lr = lr
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr)
         self.criterion = torch.nn.CrossEntropyLoss()
-        cls_num_list=self.get_num_of_each_class()
+        cls_num_list=self.get_num_of_each_class(self.dataset)
         self.ce_criterion = LogitAdjust(cls_num_list)
         print(f'client{id} each class num: {cls_num_list}')
     
-    def get_num_of_each_class(self):
-        class_sum = [0] * self.dataset.num_classes
-        for idx in self.dataset.data_indices_train:
-            label = self.dataset.targets_train[idx]
-            print(label)
-            class_sum[label] += 1
-        return class_sum
+    def get_num_of_each_class(self, fed_dataset):
+        """
+        Count the number of labels for each class in the datasets of all clients.
 
+        Args:
+            fed_dataset: The federated dataset containing datasets for all clients.
+
+        Returns:
+            A list of lists where each inner list contains the counts of labels for each class
+            for each client.
+        """
+        label_counts_per_client = []
+        
+        for client_index in range(self.total_clients):
+            dataset_train_client = fed_dataset.get_dataset(client_index, type="train")
+            label_counts = Counter()
+            for _, label in dataset_train_client:
+                label_counts[label] += 1
+            label_counts_per_client.append([label_counts[class_label] for class_label in sorted(label_counts.keys())])
+        
+        return label_counts_per_client
 
     def local_process(self, payload, id_list):
         model_parameters = payload[0]
