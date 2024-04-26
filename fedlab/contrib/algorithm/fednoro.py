@@ -83,7 +83,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.lr = lr
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr)
         self.criterion = torch.nn.CrossEntropyLoss()
-        self.ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class_per_client(self.dataset.data_indices_train))
+        self.ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class_per_client(self.dataset.data_indices_trainnuz))
         print("criterion", self.ce_criterion)
 
     def get_num_of_each_class_per_client(dataset, data_indices):
@@ -98,7 +98,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         """
         num_samples_per_class_per_client = {}
         for cid, indices in data_indices.items():
-            class_counts = {label: 0 for label in range(dataset.num_classes)}
+            class_counts = {label: 0 for label in range(10)} #FIXME 10 = num_classes
             for idx in indices:
                 label = dataset.targets_train[idx]  # Get the label of the sample
                 class_counts[label] += 1  # Increment the count for the corresponding class
