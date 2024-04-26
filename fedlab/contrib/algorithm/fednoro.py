@@ -83,6 +83,8 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.lr = lr
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr)
         self.criterion = torch.nn.CrossEntropyLoss()
+        self.ce_criterion = torch.nn.CrossEntropyLoss() #LogitAdjust(cls_num_list=self.get_num_of_each_class())
+
 
     def get_num_of_each_class(self):
         class_sum = np.array([0] * self.dataset.num_classes)
@@ -95,12 +97,12 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         model_parameters = payload[0]
         w_local, loss_local = [], []
 
-        self.ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class())
 
         for id in (progress_bar := tqdm(id_list)):
             progress_bar.set_description(f"Training on client {id}", refresh=True)
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
-            w_local, loss_local = self.train_warmup(model_parameters.cuda(self.device), data_loader)
+            w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
+            print(w_local)
             pack = [w_local, loss_local]
             logging.info(w_local)
             self.cache.append(pack)
