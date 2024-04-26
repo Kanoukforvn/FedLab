@@ -162,7 +162,7 @@ set_seed(args.seed)
 #           Stage 1 - Warm Up              #
 ############################################
 
-logging.info("\n ---------------------begin training---------------------")
+print("\n ---------------------begin training---------------------")
 
 # client
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
