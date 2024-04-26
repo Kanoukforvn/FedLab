@@ -83,7 +83,9 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.lr = lr
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr)
         self.criterion = torch.nn.CrossEntropyLoss()
+        print("cls_num_list", cls_num_list=self.get_num_of_each_class())
         self.ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class())
+        print("criterion", self.ce_criterion)
 
     def get_num_of_each_class(self):
         """Calculate the number of instances for each class in the local dataset.
@@ -130,12 +132,12 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             
             epoch_loss = []                        
             
-            for images, labels in train_loader:
+            for data, target in train_loader:
 
-                images, labels = images.cuda(self.device), labels.cuda(self.device)
+                data, target = data.cuda(self.device), target.cuda(self.device)
                 optimizer.zero_grad()
-                logits = self._model(images)
-                loss = self.ce_criterion(logits, labels)
+                logits = self._model(data)
+                loss = self.ce_criterion(logits, target)
                 loss.backward()
                 optimizer.step()
                 epoch_loss.append(loss.item())
