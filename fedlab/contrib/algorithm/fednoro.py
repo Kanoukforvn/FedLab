@@ -83,21 +83,27 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.lr = lr
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr)
         self.criterion = torch.nn.CrossEntropyLoss()
-        print("cls_num_list", cls_num_list=self.get_num_of_each_class())
-        self.ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class())
+        self.ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class_per_client(self.dataset,self.dataset.data_indices_train))
         print("criterion", self.ce_criterion)
 
-    def get_num_of_each_class(self):
-        """Calculate the number of instances for each class in the local dataset.
+    def get_num_of_each_class_per_client(dataset, data_indices):
+        """Calculate the number of samples for each class within each client's subset.
+
+        Args:
+            dataset: The partitioned dataset (PartitionedCIFAR10 instance).
+            data_indices (dict): A dictionary mapping client IDs to lists of data indices.
 
         Returns:
-            list: A list containing the number of instances for each class.
+            dict: A dictionary where keys are client IDs and values are lists containing the count of samples for each class in the client's subset.
         """
-        class_sum = [0] * self.dataset.num_classes
-        for idx in self.dataset.data_indices_train:
-            label = self.dataset.targets_train[idx]
-            class_sum[label] += 1
-        return class_sum
+        num_samples_per_class_per_client = {}
+        for cid, indices in data_indices.items():
+            class_counts = {label: 0 for label in range(dataset.num_classes)}
+            for idx in indices:
+                label = dataset.targets_train[idx]  # Get the label of the sample
+                class_counts[label] += 1  # Increment the count for the corresponding class
+            num_samples_per_class_per_client[cid] = list(class_counts.values())
+        return num_samples_per_class_per_client
 
     def local_process(self, payload, id_list):
         model_parameters = payload[0]
