@@ -84,16 +84,10 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.lr = lr
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr)
         self.criterion = torch.nn.CrossEntropyLoss()
-        cls_num_list=self.get_num_of_each_class()
+        cls_num_list = self.get_num_of_each_class_global(self.dataset)
+        for client_index, label_counts in enumerate(cls_num_list):
+            print(f"Client {client_index} label counts: {label_counts}")
         self.ce_criterion = LogitAdjust(cls_num_list)
-        print(f'client{id} each class num: {cls_num_list}')
-    
-    def get_num_of_each_class(self):
-        class_sum = [0] * self.dataset.num_classes
-        for idx in self.dataset.data_indices_train:
-            label = self.dataset.targets_train[idx]
-            class_sum[label] += 1
-        return class_sum
 
     def get_num_of_each_class_global(self, fed_dataset):
         """
