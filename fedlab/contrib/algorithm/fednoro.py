@@ -88,22 +88,15 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         print("criterion", self.ce_criterion)
 
     def get_num_of_each_class_per_client(self, dataset, data_indices):
-        """Calculate the number of samples for each class within each client's subset.
-
-        Args:
-            dataset: The partitioned dataset (PartitionedCIFAR10 instance).
-
-        Returns:
-            dict: A dictionary where keys are client IDs and values are lists containing the count of samples for each class in the client's subset.
-        """
-        num_samples_per_class_per_client = {}
+        num_samples_per_class_per_client = []
         for cid, indices in data_indices.items():
-            class_counts = {label: 0 for label in range(dataset.num_classes)}
+            class_counts = [0] * dataset.num_classes
             for idx in indices:
-                label = dataset.targets_train[idx]  # Get the label of the sample
-                class_counts[label] += 1  # Increment the count for the corresponding class
-            num_samples_per_class_per_client[cid] = list(class_counts.values())
+                label = dataset.targets_train[idx]
+                class_counts[label] += 1
+            num_samples_per_class_per_client.append(class_counts)
         return num_samples_per_class_per_client
+    
 
     def local_process(self, payload, id_list):
         model_parameters = payload[0]
