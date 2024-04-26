@@ -13,11 +13,15 @@ class LogitAdjust(nn.Module):
         self.weight = weight
 
     def forward(self, x, target):
+        
         device = x.device
         x_m = x + self.m_list.to(device=device)
-        print("weight", self.weight)
+
+        #debug
         if self.weight is not None:
+            print("weight", self.weight)
             assert (self.weight >= 0).all(), "weights should be non-negative values"
+
         return F.cross_entropy(x_m, target, weight=self.weight)
 
 class LA_KD(nn.Module):

@@ -31,12 +31,18 @@ class Aggregators(object):
         Returns:
             torch.Tensor
         """
+        print("before if : ",weights)
+
         if weights is None:
+            print("cond None")
             weights = torch.ones(len(serialized_params_list))
 
         if not isinstance(weights, torch.Tensor):
+            print("cond None")
             weights = torch.tensor(weights)
 
+
+        print("after if : ", weights)
 
         # Move weights to the same device as the first tensor in serialized_params_list
         device = serialized_params_list[0].device
