@@ -87,7 +87,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class_per_client(self.dataset, self.dataset.data_indices_train))
         print("criterion", self.ce_criterion)
 
-    def get_num_of_each_class_per_client(dataset, data_indices):
+    def get_num_of_each_class_per_client(self, dataset, data_indices):
         """Calculate the number of samples for each class within each client's subset.
 
         Args:
