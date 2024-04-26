@@ -83,6 +83,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.lr = lr
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr)
         self.criterion = torch.nn.CrossEntropyLoss()
+        self.ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class())
 
     def get_num_of_each_class(self):
         """Calculate the number of instances for each class in the local dataset.
@@ -98,6 +99,8 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
 
     def local_process(self, payload, id_list):
         model_parameters = payload[0]
+        w_local, loss_local = [], []
+
         for id in (progress_bar := tqdm(id_list)):
             progress_bar.set_description(f"Training on client {id}", refresh=True)
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
@@ -107,7 +110,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             self.cache.append(pack)
 
 
-    def train_LA(self, model_parameters, data_loader):
+    def train_LA(self, model_parameters, train_loader):
         """Train the local model using LogitAdjust.
 
         Args:
@@ -123,28 +126,24 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
 
         optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
         
-        ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class())
-        epoch_loss = []
-
         for epoch in range(self.epochs):
-            batch_loss = []
-
-            for _, (images, labels) in enumerate(data_loader):
+            
+            epoch_loss = []                        
+            
+            for images, labels in train_loader:
 
                 images, labels = images.cuda(self.device), labels.cuda(self.device)
-
                 optimizer.zero_grad()
                 logits = self._model(images)
-                loss = ce_criterion(logits, labels)
-
+                loss = self.ce_criterion(logits, labels)
                 loss.backward()
                 optimizer.step()
+                epoch_loss.append(loss.item())
 
-                batch_loss.append(loss.item())
+            avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
 
-            epoch_loss.append(sum(batch_loss) / len(batch_loss))
-
-        avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
+        # Increment iteration
+        self.iteration += 1
 
         return [SerializationTool.serialize_model(self._model), avg_epoch_loss]
 
@@ -186,4 +185,4 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.iteration += 1
 
         # Return serialized model parameters and average loss
-        return [SerializationTool.serialize_model(self._model, cpu=False), avg_epoch_loss]
+        return [SerializationTool.serialize_model(self._model), avg_epoch_loss]
