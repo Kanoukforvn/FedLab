@@ -83,21 +83,20 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.lr = lr
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr)
         self.criterion = torch.nn.CrossEntropyLoss()
-        self.ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class_per_client(self.dataset.data_indices_train))
+        self.ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class_per_client(self.dataset))
         print("criterion", self.ce_criterion)
 
-    def get_num_of_each_class_per_client(dataset, data_indices):
+    def get_num_of_each_class_per_client(dataset):
         """Calculate the number of samples for each class within each client's subset.
 
         Args:
             dataset: The partitioned dataset (PartitionedCIFAR10 instance).
-            data_indices (dict): A dictionary mapping client IDs to lists of data indices.
-
+            
         Returns:
             dict: A dictionary where keys are client IDs and values are lists containing the count of samples for each class in the client's subset.
         """
         num_samples_per_class_per_client = {}
-        for cid, indices in data_indices.items():
+        for cid, indices in dataset.data_indices_train.items():
             class_counts = {label: 0 for label in range(10)} #FIXME 10 = num_classes
             for idx in indices:
                 label = dataset.targets_train[idx]  # Get the label of the sample
