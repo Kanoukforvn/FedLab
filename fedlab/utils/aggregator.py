@@ -38,7 +38,7 @@ class Aggregators(object):
             weights = torch.ones(len(serialized_params_list))
 
         if not isinstance(weights, torch.Tensor):
-            print("cond None")
+            print("cond no isinstance ")
             weights = torch.tensor(weights)
 
 

@@ -100,7 +100,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         for id in (progress_bar := tqdm(id_list)):
             progress_bar.set_description(f"Training on client {id}", refresh=True)
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
-            w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
+            w_local, loss_local = self.train_warmup(model_parameters.cuda(self.device), data_loader)
             pack = [w_local, loss_local]
             logging.info(w_local)
             self.cache.append(pack)
