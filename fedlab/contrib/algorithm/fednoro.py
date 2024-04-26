@@ -83,7 +83,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.lr = lr
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr)
         self.criterion = torch.nn.CrossEntropyLoss()
-        print(cls_num_list=self.get_num_of_each_class_per_client(self.dataset, self.dataset.data_indices_train))
+        print(self.get_num_of_each_class_per_client(self.dataset, self.dataset.data_indices_train))
         self.ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class_per_client(self.dataset, self.dataset.data_indices_train))
         print("criterion", self.ce_criterion)
 
