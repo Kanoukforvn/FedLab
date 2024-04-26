@@ -87,7 +87,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
     def get_num_of_each_class(self):
         class_sum = np.array([0] * self.dataset.num_classes)
         for idx in self.dataset.data_indices_train:
-            label = self.dataset.targets[idx]
+            label = self.dataset.targets_train[idx]
             class_sum[label] += 1
         return class_sum.tolist()
     
