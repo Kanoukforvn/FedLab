@@ -109,7 +109,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         label_counts_per_client = []
         
         for client_index in range(self.num_clients):
-            dataset_train_client = self.dataset
+            dataset_train_client = fed_dataset
             label_counts = Counter()
             for _, label in dataset_train_client:
                 label_counts[label] += 1
