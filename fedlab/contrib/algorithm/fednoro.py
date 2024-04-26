@@ -101,7 +101,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         for id in (progress_bar := tqdm(id_list)):
             progress_bar.set_description(f"Training on client {id}", refresh=True)
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
-            w_local, loss_local = self.train_warmup(model_parameters.cuda(self.device), data_loader)
+            w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
             pack = [w_local, loss_local]
             logging.info(w_local)
             self.cache.append(pack)
@@ -111,7 +111,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         """Train the local model using LogitAdjust.
 
         Args:
-            model (torch.nn.Module): Local model.
+            model_parameter (torch.nn.Module): Local model parameter.
             data_loader (torch.utils.data.DataLoader): DataLoader for training data.
 
         Returns:
@@ -122,6 +122,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self._model.train()
 
         optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
+        
         ce_criterion = LogitAdjust(cls_num_list=self.get_num_of_each_class())
         epoch_loss = []
 

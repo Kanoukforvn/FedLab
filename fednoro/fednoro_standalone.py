@@ -30,6 +30,7 @@ from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainerS1, FedAv
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 logging.basicConfig(level = logging.INFO)
+logging.getLogger().setLevel(logging.INFO)
 
 args = Munch
 
