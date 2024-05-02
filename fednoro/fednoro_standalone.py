@@ -85,8 +85,8 @@ dataset_train = fed_cifar10.get_dataset(0, type="train")
 dataset_test = fed_cifar10.get_dataset(0, type="test")
 
 # Get the dataloaders
-dataloader_train = fed_cifar10.get_dataloader(0, batch_size=16, type="train")
-dataloader_test = fed_cifar10.get_dataloader(0, batch_size=16, type="test")
+dataloader_train = fed_cifar10.get_dataloader(0, batch_size=128, type="train")
+dataloader_test = fed_cifar10.get_dataloader(0, batch_size=128, type="test")
 
 logging.info(
     f"train: {Counter(fed_cifar10.targets_train)}, total: {len(fed_cifar10.targets_train)}")
@@ -157,7 +157,7 @@ plt.show()
 
 # local train configuration
 args.epochs = 5
-args.batch_size = 16
+args.batch_size = 128
 args.lr = 0.1
 
 model = build_model(args)
@@ -181,7 +181,7 @@ from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDCli
 args = lambda: None
 args.total_client = 5
 args.epochs = 5
-args.batch_size = 16
+args.batch_size = 128
 args.lr = 0.1
 args.com_round = 15
 args.sample_ratio = 0.1
@@ -278,7 +278,7 @@ class EvalPipeline(StandalonePipeline):
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=False,
                                        transform=transforms.ToTensor())
-test_loader = DataLoader(test_data, batch_size=32)
+test_loader = DataLoader(test_data, batch_size=1024)
 
 # Run evaluation
 eval_pipeline = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)

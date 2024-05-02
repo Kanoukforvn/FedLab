@@ -87,7 +87,6 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.criterion = torch.nn.CrossEntropyLoss()
         cls_num_list = self.get_num_of_each_class_global(self.dataset)
         for client_index, label_counts in enumerate(cls_num_list):
-            logging.info(f"Client {client_index} label counts: {label_counts}")
             self.ce_criterion = LogitAdjust(label_counts)
 
     def get_num_of_each_class_global(self, fed_dataset):
