@@ -33,7 +33,7 @@ args = Munch
 
 args.total_client = 10
 args.alpha = 0.5
-args.seed = None
+args.seed = 0
 args.preprocess = True
 args.dataname = "cifar10"
 args.model = "Resnet18"
@@ -95,7 +95,7 @@ logging.info(
 
 
 ############################################
-#           Dataset visualization          #
+#                  Dataset                 #
 ############################################
 
 # generate partition report
@@ -119,7 +119,11 @@ plt.xlabel('sample num')
 plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_10clients.png", dpi=400, bbox_inches = 'tight')
 plt.show()
 
-#noise
+
+############################################
+#            Noise Generation              #
+############################################
+
 args.level_n_lowerb = 0.3
 args.level_n_upperb = 0.5
 args.level_n_system = 0.4
