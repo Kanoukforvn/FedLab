@@ -112,7 +112,7 @@ for col in col_names:
     hetero_dir_part_df[col] = (hetero_dir_part_df[col] * hetero_dir_part_df['TotalAmount']).astype(int)
 
 #select first 10 clients for bar plot
-hetero_dir_part_df[col_names].iloc[:10].plot.barh(stacked=True)  
+hetero_dir_part_df[col_names].iloc[:5].plot.barh(stacked=True)  
 plt.tight_layout()
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('sample num')
@@ -147,7 +147,7 @@ for col in col_names:
     hetero_dir_part_df[col] = (hetero_dir_part_df[col] * hetero_dir_part_df['TotalAmount']).astype(int)
 
 #select first 10 clients for bar plot
-hetero_dir_part_df[col_names].iloc[:10].plot.barh(stacked=True)  
+hetero_dir_part_df[col_names].iloc[:5].plot.barh(stacked=True)  
 plt.tight_layout()
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('sample num')
