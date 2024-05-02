@@ -30,7 +30,7 @@ from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainerS1, FedAv
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 logging.basicConfig(level = logging.INFO)
-logging.getLogger().setLevel(logging.INFO)
+
 
 args = Munch
 
@@ -162,7 +162,7 @@ set_seed(args.seed)
 #           Stage 1 - Warm Up              #
 ############################################
 
-print("\n ---------------------begin training---------------------")
+logging.info("\n ---------------------begin training---------------------")
 
 # client
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
@@ -199,7 +199,7 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score, confusion_m
 
 label_counts_per_client = trainer.get_num_of_each_class_global(fed_cifar10)
 for client_index, label_counts in enumerate(label_counts_per_client):
-    print(f"Client {client_index} label counts: {label_counts}")
+    logging.info(f"Client {client_index} label counts: {label_counts}")
 
 class EvalPipeline(StandalonePipeline):
     def __init__(self, handler, trainer, test_loader):
@@ -225,7 +225,7 @@ class EvalPipeline(StandalonePipeline):
                 self.handler.load(pack)
 
             loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            print("Round {}, Loss {:.4f}, Test Accuracy {:.4f}".format(t, loss, acc))
+            logging.info("Round {}, Loss {:.4f}, Test Accuracy {:.4f}".format(t, loss, acc))
             self.loss.append(loss)
             self.acc.append(acc)
 
@@ -233,7 +233,7 @@ class EvalPipeline(StandalonePipeline):
                 'cuda'), self.test_loader, 'cuda')
             acc = accuracy_score(fed_cifar10.targets_test, pred)
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
-            print("bacc : ", bacc)
+            logging.info("bacc : ", bacc)
             # Save model if best performance
             if bacc > self.best_performance:
                 self.best_performance = bacc

@@ -13,6 +13,7 @@ import torch.nn.functional as F
 
 from sklearn.metrics import balanced_accuracy_score
 
+logging.basicConfig(level = logging.INFO)
 
 import numpy as np
 import pandas as pd
