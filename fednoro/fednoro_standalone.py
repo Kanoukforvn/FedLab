@@ -33,7 +33,7 @@ args = Munch
 
 args.total_client = 10
 args.alpha = 0.5
-args.seed = 42
+args.seed = None
 args.preprocess = True
 args.dataname = "cifar10"
 args.model = "Resnet18"
@@ -71,9 +71,9 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   dataname=args.dataname,
                                   num_clients=args.total_client,
                                   num_classes=args.n_classes,
-                                  partition="iid",
+                                  balance=True,
+                                  partition="dirichlet",
                                   dir_alpha=args.alpha,
-                                  seed=args.seed,
                                   preprocess=args.preprocess,
                                   download=True,
                                   verbose=True,
