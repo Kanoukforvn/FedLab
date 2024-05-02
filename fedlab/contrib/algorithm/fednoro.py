@@ -99,22 +99,18 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
 
         Returns:
             A list of lists where each inner list contains the counts of labels for each class
-            for each client. The length of each inner list is always ten.
+            for each client.
         """
         label_counts_per_client = []
-
+        
         for client_index in range(self.num_clients):
             dataset_train_client = fed_dataset.get_dataset(client_index, type="train")
-            label_counts = Counter(label for _, label in dataset_train_client)
-            
-            # Create a list of label counts with length ten
-            label_counts_list = [label_counts[class_label] if class_label in label_counts else 0 
-                                 for class_label in range(self.num_class)]
-            
-            label_counts_per_client.append(label_counts_list)
+            label_counts = Counter()
+            for _, label in dataset_train_client:
+                label_counts[label] += 1
+            label_counts_per_client.append([label_counts[class_label] for class_label in sorted(label_counts.keys())])
         
         return label_counts_per_client
-
 
     def local_process(self, payload, id_list):
         model_parameters = payload[0]
@@ -125,7 +121,6 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
             w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
             pack = [w_local, loss_local]
-            logging.info(w_local)
             self.cache.append(pack)
 
 
