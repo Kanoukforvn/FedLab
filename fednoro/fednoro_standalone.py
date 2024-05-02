@@ -38,6 +38,7 @@ args.preprocess = True
 args.dataname = "cifar10"
 args.model = "Resnet18"
 args.pretrained = 1
+args.num_users = args.total_client
 #args.device = "cuda" if torch.cuda.is_available() else "cpu"
 args.device = "cuda"
 
