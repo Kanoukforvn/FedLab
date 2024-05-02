@@ -32,7 +32,7 @@ from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 args = Munch
 
 args.total_client = 10
-args.alpha = 0.5
+args.alpha = 0.3
 args.seed = 1
 args.preprocess = True
 args.dataname = "cifar10"
