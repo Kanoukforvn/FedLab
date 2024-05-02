@@ -21,20 +21,22 @@ trainset = torchvision.datasets.CIFAR10(root="./", train=True, download=True)
 num_clients = 100
 num_classes = 10
 
+seed = 2021
 
 # perform partition
 hetero_dir_part = CIFAR10Partitioner(trainset.targets, 
                                 num_clients,
-                                balance=None, 
+                                balance=True, 
                                 partition="dirichlet",
-                                dir_alpha=0.3,)
+                                dir_alpha=1,
+                                seed=seed)
 
 torch.save(hetero_dir_part.client_dict, "cifar10_hetero_dir.pkl")
 print(len(hetero_dir_part))
 
 
 # generate partition report
-csv_file = "./partition-reports/cifar10_hetero_dir_0.3_100clients.csv"
+csv_file = "../../fednoro/partition-reports/cifar10_hetero_dir_0.3_100clients.csv"
 partition_report(trainset.targets, hetero_dir_part.client_dict, 
                  class_num=num_classes, 
                  verbose=False, file=csv_file)
@@ -53,6 +55,6 @@ hetero_dir_part_df[col_names].iloc[:10].plot.barh(stacked=True)
 plt.tight_layout()
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('sample num')
-plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_100clients.png", dpi=400, bbox_inches = 'tight')
+plt.savefig(f"../../fednoro/imgs/cifar10_hetero_dir_0.3_100clients_balanced.png", dpi=400, bbox_inches = 'tight')
 
 
