@@ -58,7 +58,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         epochs (int): Number of epochs for FedNoRo algorithm.
     """
     def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
-                 warmup_rounds=10, lr_warmup=0.01, epochs_warmup=10, lr=0.01, epochs=10) -> None:
+                 warmup_rounds=10, lr_warmup=0.01, epochs_warmup=10, lr=0.01, epochs=10, num_class = 10) -> None:
         super().__init__(model, num_clients, cuda, device, personal)
         self._LOGGER = logger if logger is not None else Logger()
         self.warmup_rounds = warmup_rounds #FIXME link warmup round with com round
@@ -67,6 +67,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.lr = lr
         self.epochs = epochs
         self.iteration = 0
+        self.num_class = num_class
 
     def setup_dataset(self, dataset):
         self.dataset = dataset
@@ -99,16 +100,19 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
 
         Returns:
             A list of lists where each inner list contains the counts of labels for each class
-            for each client.
+            for each client. The length of each inner list is always ten.
         """
         label_counts_per_client = []
-        
+
         for client_index in range(self.num_clients):
             dataset_train_client = fed_dataset.get_dataset(client_index, type="train")
-            label_counts = Counter()
-            for _, label in dataset_train_client:
-                label_counts[label] += 1
-            label_counts_per_client.append([label_counts[class_label] for class_label in sorted(label_counts.keys())])
+            label_counts = Counter(label for _, label in dataset_train_client)
+            
+            # Create a list of label counts with length ten
+            label_counts_list = [label_counts[class_label] if class_label in label_counts else 0 
+                                 for class_label in range(self.num_class)]
+            
+            label_counts_per_client.append(label_counts_list)
         
         return label_counts_per_client
 
