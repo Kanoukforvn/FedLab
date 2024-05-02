@@ -235,13 +235,8 @@ class EvalPipeline(StandalonePipeline):
             self.loss.append(loss)
             self.acc.append(acc)
 
-            pred = globaltest(copy.deepcopy(model).to(
-                'cuda'), self.test_loader, 'cuda')
-            acc = accuracy_score(fed_cifar10.targets_test, pred)
-            
-            
-            if acc > self.best_performance:
-                self.best_performance = acc
+            if self.acc > self.best_performance:
+                self.best_performance = self.acc
                 logging.info(f'Best balanced accuracy: {self.best_performance:.4f}')
 
                 # Save model state_dict
