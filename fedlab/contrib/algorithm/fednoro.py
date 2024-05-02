@@ -57,9 +57,9 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         lr (float): Learning rate for FedNoRo algorithm.
         epochs (int): Number of epochs for FedNoRo algorithm.
     """
-    def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
-                 warmup_rounds=10, lr_warmup=0.01, epochs_warmup=10, lr=0.01, epochs=10, num_class = 10) -> None:
-        super().__init__(model, num_clients, cuda, device, personal)
+    def __init__(self, model, cuda=False, device=None, logger=None, personal=False,
+                 warmup_rounds=15, lr_warmup=0.01, epochs_warmup=5, lr=0.01, epochs=5, num_class = 10, num_clients = 5) -> None:
+        super().__init__(model, cuda, device, personal)
         self._LOGGER = logger if logger is not None else Logger()
         self.warmup_rounds = warmup_rounds #FIXME link warmup round with com round
         self.lr_warmup = lr_warmup
@@ -68,6 +68,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.epochs = epochs
         self.iteration = 0
         self.num_class = num_class
+        self.num_clients = num_clients
 
     def setup_dataset(self, dataset):
         self.dataset = dataset
