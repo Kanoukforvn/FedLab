@@ -238,6 +238,8 @@ class EvalPipeline(StandalonePipeline):
             pred = globaltest(copy.deepcopy(model).to(
                 'cuda'), self.test_loader, 'cuda')
             acc = accuracy_score(fed_cifar10.targets_test, pred)
+            
+            """
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
             logging.info("bacc : {:.4f}".format(bacc))
             # Save model if best performance
@@ -249,7 +251,7 @@ class EvalPipeline(StandalonePipeline):
                 model_path = f'fednoro/stage1_model_{t}.pth'
                 torch.save(self.handler.model.state_dict(), model_path)
                 logging.info(f'Saved model state_dict to: {model_path}')
-
+            """
             
             self.loss.append(loss)
             self.acc.append(acc)
