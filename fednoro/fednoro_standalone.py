@@ -238,7 +238,7 @@ class EvalPipeline(StandalonePipeline):
                 'cuda'), self.test_loader, 'cuda')
             acc = accuracy_score(fed_cifar10.targets_test, pred)
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
-            logging.info("bacc : ", bacc)
+            logging.info("bacc : {:.4f}".format(bacc))
             # Save model if best performance
             if bacc > self.best_performance:
                 self.best_performance = bacc
