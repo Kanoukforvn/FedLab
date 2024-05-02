@@ -48,7 +48,10 @@ if args.dataname == "cifar10":
 
 
 logging.basicConfig(level=logging.INFO,
-                        format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
+                        format='[%(asctime)s.%(msecs)03d] %(message)s', 
+                        datefmt='%H:%M:%S',
+                        stream=sys.stdout)
+
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 logging.info(str(args))
 
