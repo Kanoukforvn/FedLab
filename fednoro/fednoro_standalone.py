@@ -158,13 +158,9 @@ plt.show()
 # local train configuration
 args.epochs = 5
 args.batch_size = 128
-args.lr = 0.1
+args.lr = 0.0003
 
 model = build_model(args)
-
-args.base_lr = 3e-4
-args.warm = 1
-args.s1 = 15
         
 set_seed(args.seed)
 
@@ -182,7 +178,7 @@ args = lambda: None
 args.total_client = 5
 args.epochs = 5
 args.batch_size = 128
-args.lr = 0.1
+args.lr = 0.0003
 args.com_round = 15
 args.sample_ratio = 0.1
 args.cuda = True
