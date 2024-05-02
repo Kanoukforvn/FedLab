@@ -240,11 +240,8 @@ class EvalPipeline(StandalonePipeline):
             acc = accuracy_score(fed_cifar10.targets_test, pred)
             
             
-            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
-            logging.info("bacc : {:.4f}".format(bacc))
-            # Save model if best performance
-            if bacc > self.best_performance:
-                self.best_performance = bacc
+            if acc > self.best_performance:
+                self.best_performance = acc
                 logging.info(f'Best balanced accuracy: {self.best_performance:.4f}')
 
                 # Save model state_dict
