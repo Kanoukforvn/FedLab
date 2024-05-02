@@ -32,7 +32,7 @@ from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 args = Munch
 
 args.total_client = 10
-args.alpha = 0.5
+args.alpha = 0.3
 args.seed = 0
 args.preprocess = True
 args.dataname = "cifar10"
@@ -71,7 +71,7 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   dataname=args.dataname,
                                   num_clients=args.total_client,
                                   num_classes=args.n_classes,
-                                  balance=True,
+                                  balance=False,
                                   partition="dirichlet",
                                   seed=args.seed,
                                   dir_alpha=args.alpha,
