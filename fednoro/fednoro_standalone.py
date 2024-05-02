@@ -29,9 +29,6 @@ from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files
 from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainerS1, FedAvgServerHandler
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
-logging.basicConfig(level = logging.INFO)
-
-
 args = Munch
 
 args.total_client = 10
@@ -48,6 +45,12 @@ args.device = "cuda"
 
 if args.dataname == "cifar10":
     args.n_classes = 10
+
+
+logging.basicConfig(level=logging.INFO,
+                        format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+logging.info(str(args))
 
 
 # We provide a example usage of patitioned CIFAR10 dataset
