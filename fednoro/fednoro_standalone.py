@@ -31,8 +31,8 @@ from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 args = Munch
 
-args.total_client = 10
-args.alpha = 0.9
+args.total_client = 5
+args.alpha = 2
 args.seed = 1
 args.preprocess = True
 args.dataname = "cifar10"
@@ -179,11 +179,11 @@ from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDCli
 
 # Create client trainer and server handler
 args = lambda: None
-args.total_client = 10
+args.total_client = 5
 args.epochs = 5
 args.batch_size = 128
 args.lr = 0.1
-args.com_round = 10
+args.com_round = 15
 args.sample_ratio = 0.1
 args.cuda = True
 args.device = "cuda"
