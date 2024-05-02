@@ -85,8 +85,8 @@ dataset_train = fed_cifar10.get_dataset(0, type="train")
 dataset_test = fed_cifar10.get_dataset(0, type="test")
 
 # Get the dataloaders
-dataloader_train = fed_cifar10.get_dataloader(0, batch_size=16, type="train")
-dataloader_test = fed_cifar10.get_dataloader(0, batch_size=16, type="test")
+dataloader_train = fed_cifar10.get_dataloader(0, batch_size=128, type="train")
+dataloader_test = fed_cifar10.get_dataloader(0, batch_size=128, type="test")
 
 logging.info(
     f"train: {Counter(fed_cifar10.targets_train)}, total: {len(fed_cifar10.targets_train)}")
@@ -157,10 +157,14 @@ plt.show()
 
 # local train configuration
 args.epochs = 5
-args.batch_size = 16
-args.lr = 0.0003
+args.batch_size = 128
+args.lr = 0.1
 
 model = build_model(args)
+
+args.base_lr = 3e-4
+args.warm = 1
+args.s1 = 15
         
 set_seed(args.seed)
 
@@ -177,14 +181,14 @@ from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDCli
 args = lambda: None
 args.total_client = 5
 args.epochs = 5
-args.batch_size = 16
-args.lr = 0.0003
+args.batch_size = 128
+args.lr = 0.1
 args.com_round = 15
 args.sample_ratio = 0.1
 args.cuda = True
 args.device = "cuda"
 
-trainer = FedNoRoSerialClientTrainerS1(model, cuda=args.cuda)
+trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
@@ -238,7 +242,6 @@ class EvalPipeline(StandalonePipeline):
             pred = globaltest(copy.deepcopy(model).to(
                 'cuda'), self.test_loader, 'cuda')
             acc = accuracy_score(fed_cifar10.targets_test, pred)
-            """
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
             logging.info("bacc : {:.4f}".format(bacc))
             # Save model if best performance
@@ -251,7 +254,7 @@ class EvalPipeline(StandalonePipeline):
                 torch.save(self.handler.model.state_dict(), model_path)
                 logging.info(f'Saved model state_dict to: {model_path}')
 
-            """
+            
             self.loss.append(loss)
             self.acc.append(acc)
             t += 1
@@ -275,7 +278,7 @@ class EvalPipeline(StandalonePipeline):
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=False,
                                        transform=transforms.ToTensor())
-test_loader = DataLoader(test_data, batch_size=32)
+test_loader = DataLoader(test_data, batch_size=1024)
 
 # Run evaluation
 eval_pipeline = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
