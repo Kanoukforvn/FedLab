@@ -240,7 +240,7 @@ class EvalPipeline(StandalonePipeline):
                 # Save model state_dict
                 model_path = f'fednoro/stage1_model_{t}.pth'
                 torch.save(self.handler.model.state_dict(), model_path)
-                logging.info(f'Saved model state_dict to: {model_path}')
+                # logging.info(f'Saved model state_dict to: {model_path}')
             
             self.loss.append(loss)
             self.acc.append(acc)
