@@ -245,6 +245,9 @@ class EvalPipeline(StandalonePipeline):
             self.loss.append(loss)
             self.acc.append(acc)
             t += 1
+        
+        logging.info(f'Final best accuracy: {self.best_performance:.4f}')
+
 
     def show(self):
         plt.figure(figsize=(8, 4.5))
