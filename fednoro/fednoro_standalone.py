@@ -232,18 +232,15 @@ class EvalPipeline(StandalonePipeline):
 
             loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
             logging.info("Round {}, Loss {:.4f}, Test Accuracy {:.4f}".format(t, loss, acc))
-            self.loss.append(loss)
-            self.acc.append(acc)
-
-            if self.acc > self.best_performance:
-                self.best_performance = self.acc
-                logging.info(f'Best balanced accuracy: {self.best_performance:.4f}')
+            
+            if acc > self.best_performance:
+                self.best_performance = acc
+                logging.info(f'Best accuracy: {self.best_performance:.4f}')
 
                 # Save model state_dict
                 model_path = f'fednoro/stage1_model_{t}.pth'
                 torch.save(self.handler.model.state_dict(), model_path)
                 logging.info(f'Saved model state_dict to: {model_path}')
-            
             
             self.loss.append(loss)
             self.acc.append(acc)
