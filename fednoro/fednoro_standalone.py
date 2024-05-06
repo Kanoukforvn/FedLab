@@ -41,7 +41,7 @@ args.pretrained = 1
 args.num_users = args.total_client
 #args.device = "cuda" if torch.cuda.is_available() else "cpu"
 args.device = "cuda"
-
+args.cuda = True
 
 if args.dataname == "cifar10":
     args.n_classes = 10
