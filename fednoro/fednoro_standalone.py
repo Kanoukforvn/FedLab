@@ -200,7 +200,7 @@ import torchvision
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, confusion_matrix
 
 ############################################
-#      Stage 1 - Evaluation Pipeline       #
+#      Stage 1-1 - Evaluation Pipeline       #
 ############################################
 
 label_counts_per_client = trainer.get_num_of_each_class_global(fed_cifar10)
@@ -232,7 +232,7 @@ class EvalPipeline(StandalonePipeline):
 
             loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
             logging.info("Round {}, Loss {:.4f}, Test Accuracy {:.4f}".format(t, loss, acc))
-            
+
             if acc > self.best_performance:
                 self.best_performance = acc
                 logging.info(f'Best accuracy: {self.best_performance:.4f}')
@@ -275,90 +275,13 @@ eval_pipeline = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_
 eval_pipeline.main()
 eval_pipeline.show()
 
-model_path = os.path.join("model", "s1_model_params.pth")
-torch.save(model.state_dict(), model_path)
+#model_path = os.path.join("model", "s1_model_params.pth")
+#torch.save(model.state_dict(), model_path)
 
-"""
-# trainer = SGDClientTrainer(model, cuda=True) # single trainer
-trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda) # serial trainer
+############################################
+#      Stage 1-2 - Client Selection        #
+############################################
 
-trainer.setup_dataset(fed_cifar10)
-trainer.setup_optim(args.epochs, args.batch_size, args.lr)
-
-
-# server
-from fedlab.contrib.algorithm.basic_server import SyncServerHandler
-
-# global configuration
-args.com_round = 10
-args.sample_ratio = 0.1
-
-handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
-
-
-from fedlab.utils.functional import evaluate
-from fedlab.core.standalone import StandalonePipeline
-
-from torch import nn
-from torch.utils.data import DataLoader
-import torchvision
-
-class EvalPipeline(StandalonePipeline):
-    def __init__(self, handler, trainer, test_loader):
-        super().__init__(handler, trainer)
-        self.test_loader = test_loader 
-        self.loss = []
-        self.acc = []
-        
-    def main(self):
-        t=0
-        while self.handler.if_stop is False:
-            # server side
-            sampled_clients = self.handler.sample_clients()
-            broadcast = self.handler.downlink_package
-            
-            # client side
-            self.trainer.local_process(broadcast, sampled_clients)
-            uploads = self.trainer.uplink_package
-
-            # server side
-            for pack in uploads:
-                self.handler.load(pack)
-
-            loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            print("Round {}, Loss {:.4f}, Test Accuracy {:.4f}".format(t, loss, acc))
-            t+=1
-            self.loss.append(loss)
-            self.acc.append(acc)
-    
-    def show(self):
-        fig, axs = plt.subplots(1, 2, figsize=(12, 6))
-
-        # Plot loss
-        axs[0].plot(np.arange(len(self.loss)), self.loss, color='blue')
-        axs[0].set_title('Loss')
-        axs[0].set_xlabel('Communication Round')
-        axs[0].set_ylabel('Loss')
-
-        # Plot accuracy
-        axs[1].plot(np.arange(len(self.acc)), self.acc, color='red')
-        axs[1].set_title('Accuracy')
-        axs[1].set_xlabel('Communication Round')
-        axs[1].set_ylabel('Accuracy')
-
-        plt.savefig(f"./imgs/cifar10_hetero_dir_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
-        plt.tight_layout()
-        plt.show()
-        
-    
-        
-test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
-                                       train=False,
-                                       transform=transforms.ToTensor())
-test_loader = DataLoader(test_data, batch_size=1024)
-
-standalone_eval = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
-standalone_eval.main()
-
-standalone_eval.show()
-"""
+model_path = f"outputs_{args.dataset}_{args.level_n_system}_{args.level_n_lowerb}_{args.level_n_upperb}/Fed_{args.level_n_system}_{args.level_n_lowerb}_{args.level_n_upperb}_{args.local_ep}/models/stage1_model_{args.s1-1}.pth"
+logging.info(
+    f"********************** load model from: {model_path} **********************")

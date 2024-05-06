@@ -41,27 +41,12 @@ class FedAvgServerHandler(SyncServerHandler):
 ##################
         
 class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
-    """
-    Train multiple clients in a single process using FedNoRo algorithm with warm-up phase.
 
-    Args:
-        model (torch.nn.Module): Model used in this federation.
-        num_clients (int): Number of clients in current trainer.
-        cuda (bool): Use GPUs or not. Default: ``False``.
-        device (str, optional): Assign model/data to the given GPUs. E.g., 'cuda:0' or 'cuda:0,1'. Defaults to None.
-        logger (Logger, optional): Object of :class:`Logger`.
-        personal (bool, optional): If True is passed, SerialModelMaintainer will generate the copy of local parameters list and maintain them respectively. These parameters are indexed by [0, num-1]. Defaults to False.
-        warmup_rounds (int): Number of warm-up rounds for FedAvg.
-        lr_warmup (float): Learning rate for warm-up phase.
-        epochs_warmup (int): Number of epochs for warm-up phase.
-        lr (float): Learning rate for FedNoRo algorithm.
-        epochs (int): Number of epochs for FedNoRo algorithm.
-    """
     def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
                  warmup_rounds=15, lr_warmup=0.0003, epochs_warmup=5, lr=0.01, epochs=5, num_class = 10) -> None:
         super().__init__(model, num_clients, cuda, device, personal)
         self._LOGGER = logger if logger is not None else Logger()
-        self.warmup_rounds = warmup_rounds #FIXME link warmup round with com round
+        self.warmup_rounds = warmup_rounds #FIXME replace  com round with warm up round
         self.lr_warmup = lr_warmup
         self.epochs_warmup = epochs_warmup
         self.lr = lr
@@ -73,13 +58,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.dataset = dataset
     
     def setup_optim(self, epochs, batch_size, lr):
-        """Set up local optimization configuration.
 
-        Args:
-            epochs (int): Local epochs.
-            batch_size (int): Local batch size. 
-            lr (float): Learning rate.
-        """
         self.epochs = epochs
         self.batch_size = batch_size
         self.lr = lr
@@ -90,16 +69,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             self.ce_criterion = LogitAdjust(label_counts)
 
     def get_num_of_each_class_global(self, fed_dataset):
-        """
-        Count the number of labels for each class in the datasets of all clients.
 
-        Args:
-            fed_dataset: The federated dataset containing datasets for all clients.
-
-        Returns:
-            A list of lists where each inner list contains the counts of labels for each class
-            for each client.
-        """
         label_counts_per_client = []
         
         for client_index in range(self.num_clients):
@@ -124,16 +94,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
 
 
     def train_LA(self, model_parameters, train_loader):
-        """Train the local model using LogitAdjust.
-
-        Args:
-            model_parameter (torch.nn.Module): Local model parameter.
-            data_loader (torch.utils.data.DataLoader): DataLoader for training data.
-
-        Returns:
-            tuple: A tuple containing the updated model state_dict and the average loss.
-        """
-        
+    
         self.set_model(model_parameters.cuda(self.device))
         self._model.train()
 

@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+#FIXME Cuda and cpu should be arg
 
-class LogitAdjust(nn.Module):
+class LogitAdjust(nn.Module): 
     def __init__(self, cls_num_list, tau=1, weight=None):
         super(LogitAdjust, self).__init__()
         cls_num_list_padded = [cls_num_list[i] if i < len(cls_num_list) else 0 for i in range(10)]
