@@ -292,13 +292,13 @@ from sklearn.mixture import GaussianMixture
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(dataloader_train, model.to(args.device), args, False, criterion)
-metrics = np.zeros((args.n_clients, args.n_classes)).astype("float")
-num = np.zeros((args.n_clients, args.n_classes)).astype("float")
+metrics = np.zeros((args.total_clients, args.n_classes)).astype("float")
+num = np.zeros((args.total_clients, args.n_classes)).astype("float")
 user_id = list(range(args.total_client))
-for id in range(args.n_clients):
+for id in range(args.total_clients):
     idxs = fed_cifar10.data_indices_train[id]
     for idx in idxs:
-        c = dataset_train.targets[idx]
+        c = fed_cifar10.targets_train[idx]
         num[id, c] += 1
         metrics[id, c] += loss[idx]
 metrics = metrics / num
