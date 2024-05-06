@@ -294,8 +294,7 @@ metrics = np.zeros((args.total_client, args.n_classes)).astype("float")
 num = np.zeros((args.total_client, args.n_classes)).astype("float")
 user_id = list(range(args.total_client))
 
-logging.info("loss size : ")
-logging.info(loss.shape)
+np.set_printoptions(precision=2)
 
 for id in range(args.total_client):
     idxs = fed_cifar10.data_indices_train[id]
