@@ -25,7 +25,7 @@ from munch import Munch
 from fedlab.models.mlp import MLP
 from fedlab.models.build_model import build_model
 from fedlab.utils.dataset.functional import partition_report
-from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files
+from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files, get_output
 from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainerS1, FedAvgServerHandler
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
@@ -207,7 +207,7 @@ label_counts_per_client = trainer.get_num_of_each_class_global(fed_cifar10)
 for client_index, label_counts in enumerate(label_counts_per_client):
     logging.info(f"Client {client_index} label counts: {label_counts}")
 
-class EvalPipeline(StandalonePipeline):
+class EvalPipelineS1(StandalonePipeline):
     def __init__(self, handler, trainer, test_loader):
         super().__init__(handler, trainer)
         self.test_loader = test_loader
@@ -271,7 +271,7 @@ test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
 test_loader = DataLoader(test_data, batch_size=1024)
 
 # Run evaluation
-eval_pipeline_s1 = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
+eval_pipeline_s1 = EvalPipelineS1(handler=handler, trainer=trainer, test_loader=test_loader)
 eval_pipeline_s1.main()
 eval_pipeline_s1.show()
 
@@ -285,3 +285,44 @@ eval_pipeline_s1.show()
 model_path = f"./model/stage1_model_{eval_pipeline_s1.best_round_number}.pth"
 logging.info(
     f"********************** load model from: {model_path} **********************")
+
+model.load_state_dict(torch.load(model_path))
+
+from sklearn.mixture import GaussianMixture
+
+criterion = nn.CrossEntropyLoss(reduction='none')
+local_output, loss = get_output(dataloader_train, model.to(args.device), args, False, criterion)
+metrics = np.zeros((args.n_clients, args.n_classes)).astype("float")
+num = np.zeros((args.n_clients, args.n_classes)).astype("float")
+user_id = list(range(args.total_client))
+for id in range(args.n_clients):
+    idxs = fed_cifar10.data_indices_train[id]
+    for idx in idxs:
+        c = dataset_train.targets[idx]
+        num[id, c] += 1
+        metrics[id, c] += loss[idx]
+metrics = metrics / num
+for i in range(metrics.shape[0]):
+    for j in range(metrics.shape[1]):
+        if np.isnan(metrics[i, j]):
+            metrics[i, j] = np.nanmin(metrics[:, j])
+for j in range(metrics.shape[1]):
+    metrics[:, j] = (metrics[:, j] - metrics[:, j].min()) / (metrics[:, j].max() - metrics[:, j].min())
+logging.info("metrics:")
+logging.info(metrics)
+
+vote = []
+for i in range(9):
+    gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics)
+    gmm_pred = gmm.predict(metrics)
+    noisy_clients = np.where(gmm_pred == np.argmax(gmm.means_.sum(1)))[0]
+    noisy_clients = set(list(noisy_clients))
+    vote.append(noisy_clients)
+cnt = []
+for i in vote:
+    cnt.append(vote.count(i))
+noisy_clients = list(vote[cnt.index(max(cnt))])
+
+logging.info(f"selected noisy clients: {noisy_clients}, real noisy clients: {np.where(gamma_s>0.)[0]}")
+clean_clients = list(set(user_id) - set(noisy_clients))
+logging.info(f"selected clean clients: {clean_clients}")
