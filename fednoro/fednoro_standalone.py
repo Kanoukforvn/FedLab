@@ -238,8 +238,8 @@ class EvalPipeline(StandalonePipeline):
                 logging.info(f'Best accuracy: {self.best_performance:.4f}')
 
                 # Save model state_dict
-                model_path = f'fednoro/stage1_model_{t}.pth'
-                self.rn = t
+                model_path = f'model/stage1_model_{t}.pth'
+                self.best_round_number = t
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
             
@@ -247,8 +247,7 @@ class EvalPipeline(StandalonePipeline):
             self.acc.append(acc)
             t += 1
         
-        logging.info(f'Final best accuracy: {self.best_performance:.4f}')
-
+        logging.info('Final best accuracy: {:.4f}, Best model number : {} '.format(self.best_performance, self.best_round_number))
 
     def show(self):
         plt.figure(figsize=(8, 4.5))
@@ -283,6 +282,6 @@ eval_pipeline_s1.show()
 #      Stage 1-2 - Client Selection        #
 ############################################
 
-model_path = f"./model/stage1_model_{eval_pipeline_s1.rn}.pth"
+model_path = f"./model/stage1_model_{eval_pipeline_s1.best_round_number}.pth"
 logging.info(
     f"********************** load model from: {model_path} **********************")
