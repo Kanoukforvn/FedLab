@@ -175,15 +175,8 @@ logging.info("\n ---------------------begin training---------------------")
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
 
 # Create client trainer and server handler
-args = lambda: None
-args.total_client = 5
-args.epochs = 5
-args.batch_size = 128
-args.lr = 0.0003
 args.com_round = 15
 args.sample_ratio = 0.1
-args.cuda = True
-args.device = "cuda"
 
 trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
@@ -275,9 +268,6 @@ test_loader = DataLoader(test_data, batch_size=1024)
 eval_pipeline_s1 = EvalPipelineS1(handler=handler, trainer=trainer, test_loader=test_loader)
 eval_pipeline_s1.main()
 eval_pipeline_s1.show()
-
-#model_path = os.path.join("model", "s1_model_params.pth")
-#torch.save(model.state_dict(), model_path)
 
 ############################################
 #      Stage 1-2 - Client Selection        #
