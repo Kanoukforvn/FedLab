@@ -107,6 +107,7 @@ partition_report(fed_cifar10.targets_train, fed_cifar10.data_indices_train,
 
 hetero_dir_part_df = pd.read_csv(csv_file,header=0)
 hetero_dir_part_df = hetero_dir_part_df.set_index('cid')
+
 col_names = [f"class-{i}" for i in range(args.n_classes)]
 for col in col_names:
     hetero_dir_part_df[col] = (hetero_dir_part_df[col] * hetero_dir_part_df['TotalAmount']).astype(int)
@@ -292,10 +293,12 @@ from sklearn.mixture import GaussianMixture
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(dataloader_train, model.to(args.device), args, False, criterion)
-metrics = np.zeros((args.total_clients, args.n_classes)).astype("float")
-num = np.zeros((args.total_clients, args.n_classes)).astype("float")
+
+metrics = np.zeros((args.n_clients, args.total_client)).astype("float")
+num = np.zeros((args.n_clients, args.total_client)).astype("float")
 user_id = list(range(args.total_client))
-for id in range(args.total_clients):
+
+for id in range(args.total_client):
     idxs = fed_cifar10.data_indices_train[id]
     for idx in idxs:
         c = fed_cifar10.targets_train[idx]
