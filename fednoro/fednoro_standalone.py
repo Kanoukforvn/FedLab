@@ -175,7 +175,7 @@ logging.info("\n ---------------------begin training---------------------")
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
 
 # Create client trainer and server handler
-args.com_round = 15
+args.com_round = 5
 args.sample_ratio = 0.1
 
 trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
@@ -288,10 +288,8 @@ metrics = np.zeros((args.total_client, args.n_classes)).astype("float")
 num = np.zeros((args.total_client, args.n_classes)).astype("float")
 user_id = list(range(args.total_client))
 
-
 logging.info("loss size : ")
 logging.info(loss.shape)
-
 
 for id in range(args.total_client):
     idxs = fed_cifar10.data_indices_train[id]
