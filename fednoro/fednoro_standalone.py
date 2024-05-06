@@ -175,7 +175,7 @@ logging.info("\n ---------------------begin training---------------------")
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
 
 # Create client trainer and server handler
-args.com_round = 15
+args.com_round = 5
 args.sample_ratio = 0.1
 
 trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
@@ -281,11 +281,14 @@ model.load_state_dict(torch.load(model_path))
 
 from sklearn.mixture import GaussianMixture
 
-loader = DataLoader(dataset=dataset_train, batch_size=1024,
-                    shuffle=False, num_workers=4)
+
+train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
+                                       train=True,
+                                       transform=transforms.ToTensor())
+train_loader = DataLoader(train_data, batch_size=1024)
 
 criterion = nn.CrossEntropyLoss(reduction='none')
-local_output, loss = get_output(loader, model.to(args.device), args, False, criterion)
+local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
 
 metrics = np.zeros((args.total_client, args.n_classes)).astype("float")
 num = np.zeros((args.total_client, args.n_classes)).astype("float")
@@ -297,10 +300,9 @@ logging.info(loss.shape)
 for id in range(args.total_client):
     idxs = fed_cifar10.data_indices_train[id]
     for idx in idxs:
-        if idx < len(loss):  #FIXME Check if idx is within the bounds of the loss array => out of bounds index aren't normal
-            c = fed_cifar10.targets_train[idx]
-            num[id, c] += 1
-            metrics[id, c] += loss[idx]
+        c = fed_cifar10.targets_train[idx]
+        num[id, c] += 1
+        metrics[id, c] += loss[idx]
 metrics = metrics / num
 for i in range(metrics.shape[0]):
     for j in range(metrics.shape[1]): 
