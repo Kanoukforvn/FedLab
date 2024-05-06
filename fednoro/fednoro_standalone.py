@@ -38,7 +38,7 @@ args.preprocess = True
 args.dataname = "cifar10"
 args.model = "Resnet18"
 args.pretrained = 1
-args.num_users = args.total_client
+args.num_users = args.num_client
 #args.device = "cuda" if torch.cuda.is_available() else "cpu"
 args.device = "cuda"
 args.cuda = True
@@ -292,11 +292,17 @@ for id in range(args.total_client):
     idxs = fed_cifar10.data_indices_train[id]
     for idx in idxs:
         c = fed_cifar10.targets_train[idx]
+        logging.info("c : ")
+        logging.info(c)
+
+        logging.info("id : ")
+        logging.info(id)
+
         num[id, c] += 1
         metrics[id, c] += loss[idx]
 metrics = metrics / num
 for i in range(metrics.shape[0]):
-    for j in range(metrics.shape[1]):
+    for j in range(metrics.shape[1]): 
         if np.isnan(metrics[i, j]):
             metrics[i, j] = np.nanmin(metrics[:, j])
 for j in range(metrics.shape[1]):
