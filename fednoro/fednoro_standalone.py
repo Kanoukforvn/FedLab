@@ -288,16 +288,15 @@ metrics = np.zeros((args.total_client, args.n_classes)).astype("float")
 num = np.zeros((args.total_client, args.n_classes)).astype("float")
 user_id = list(range(args.total_client))
 
+
+logging.info("loss size : ")
+logging.info(loss.shape)
+
+
 for id in range(args.total_client):
     idxs = fed_cifar10.data_indices_train[id]
     for idx in idxs:
         c = fed_cifar10.targets_train[idx]
-        logging.info("c : ")
-        logging.info(c)
-
-        logging.info("id : ")
-        logging.info(id)
-
         num[id, c] += 1
         metrics[id, c] += loss[idx]
 metrics = metrics / num
