@@ -175,7 +175,7 @@ logging.info("\n ---------------------begin training---------------------")
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
 
 # Create client trainer and server handler
-args.com_round = 5
+args.com_round = 15
 args.sample_ratio = 0.1
 
 trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
@@ -297,7 +297,7 @@ logging.info(loss.shape)
 for id in range(args.total_client):
     idxs = fed_cifar10.data_indices_train[id]
     for idx in idxs:
-        if idx < len(loss):  # Check if idx is within the bounds of the loss array
+        if idx < len(loss):  #FIXME Check if idx is within the bounds of the loss array => out of bounds index aren't normal
             c = fed_cifar10.targets_train[idx]
             num[id, c] += 1
             metrics[id, c] += loss[idx]
