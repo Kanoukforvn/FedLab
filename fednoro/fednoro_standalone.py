@@ -175,7 +175,7 @@ logging.info("\n ---------------------begin training---------------------")
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
 
 # Create client trainer and server handler
-args.com_round = 5
+args.com_round = 15
 args.sample_ratio = 0.1
 
 trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
