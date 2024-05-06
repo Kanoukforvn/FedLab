@@ -294,9 +294,12 @@ logging.info(loss.shape)
 for id in range(args.total_client):
     idxs = fed_cifar10.data_indices_train[id]
     for idx in idxs:
-        c = fed_cifar10.targets_train[idx]
-        num[id, c] += 1
-        metrics[id, c] += loss[idx]
+        if idx < len(loss):  # Check if idx is within the bounds of the loss array
+            c = fed_cifar10.targets_train[idx]
+            num[id, c] += 1
+            metrics[id, c] += loss[idx]
+        else:
+            logging.warning(f"Index {idx} is out of bounds for the loss array")
 metrics = metrics / num
 for i in range(metrics.shape[0]):
     for j in range(metrics.shape[1]): 
