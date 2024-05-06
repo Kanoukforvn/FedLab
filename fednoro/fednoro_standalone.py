@@ -301,8 +301,6 @@ for id in range(args.total_client):
             c = fed_cifar10.targets_train[idx]
             num[id, c] += 1
             metrics[id, c] += loss[idx]
-        else:
-            logging.warning(f"Index {idx} is out of bounds for the loss array")
 metrics = metrics / num
 for i in range(metrics.shape[0]):
     for j in range(metrics.shape[1]): 
