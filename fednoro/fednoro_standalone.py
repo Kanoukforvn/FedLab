@@ -239,6 +239,7 @@ class EvalPipeline(StandalonePipeline):
 
                 # Save model state_dict
                 model_path = f'fednoro/stage1_model_{t}.pth'
+                self.rn = t
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
             
@@ -271,9 +272,9 @@ test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
 test_loader = DataLoader(test_data, batch_size=1024)
 
 # Run evaluation
-eval_pipeline = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
-eval_pipeline.main()
-eval_pipeline.show()
+eval_pipeline_s1 = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
+eval_pipeline_s1.main()
+eval_pipeline_s1.show()
 
 #model_path = os.path.join("model", "s1_model_params.pth")
 #torch.save(model.state_dict(), model_path)
@@ -282,6 +283,6 @@ eval_pipeline.show()
 #      Stage 1-2 - Client Selection        #
 ############################################
 
-model_path = f"outputs_{args.dataset}_{args.level_n_system}_{args.level_n_lowerb}_{args.level_n_upperb}/Fed_{args.level_n_system}_{args.level_n_lowerb}_{args.level_n_upperb}_{args.local_ep}/models/stage1_model_{args.s1-1}.pth"
+model_path = f"./model/stage1_model_{eval_pipeline_s1.rn}.pth"
 logging.info(
     f"********************** load model from: {model_path} **********************")
