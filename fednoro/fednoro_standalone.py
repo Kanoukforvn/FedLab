@@ -281,8 +281,11 @@ model.load_state_dict(torch.load(model_path))
 
 from sklearn.mixture import GaussianMixture
 
+loader = DataLoader(dataset=dataset_train, batch_size=32,
+                    shuffle=False, num_workers=4)
+
 criterion = nn.CrossEntropyLoss(reduction='none')
-local_output, loss = get_output(dataloader_train, model.to(args.device), args, False, criterion)
+local_output, loss = get_output(loader, model.to(args.device), args, False, criterion)
 
 metrics = np.zeros((args.total_client, args.n_classes)).astype("float")
 num = np.zeros((args.total_client, args.n_classes)).astype("float")
