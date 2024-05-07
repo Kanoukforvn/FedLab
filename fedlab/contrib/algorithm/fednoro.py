@@ -67,7 +67,8 @@ class DaAggregator(object):
 
     @staticmethod
     def DaAgg(serialized_params_list, weights, clean_clients, noisy_clients):
-        """Data-aware aggregation
+        """
+        Data-aware aggregation
 
         Args:
             serialized_params_list (list[torch.Tensor]): List of serialized model parameters from each client.
@@ -90,10 +91,10 @@ class DaAggregator(object):
 
         # Initialize client weights
         num_params = [len(params) for params in serialized_params_list]
-        client_weight = torch.tensor(num_params, dtype=torch.float)
+        client_weight = torch.tensor(num_params, dtype=torch.float, device=device)
         client_weight /= torch.sum(client_weight)
 
-        # Calculate distance from noisy clients
+        # Calculate distance from noisy clients using tensor operations
         noisy_weights = weights[noisy_clients]
         clean_weights = weights[clean_clients]
         distances = DaAggregator.model_dist(noisy_weights[:, None], clean_weights[None, :])
@@ -112,7 +113,6 @@ class DaAggregator(object):
             torch.stack(serialized_params_list, dim=-1) * client_weight, dim=-1)
 
         return serialized_parameters
-
 
 ##################
 #
