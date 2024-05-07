@@ -212,6 +212,8 @@ class EvalPipelineS1(StandalonePipeline):
     def main(self):
         t = 0
         while self.handler.if_stop is False:
+            logging.info("Round {}".format(t))
+            
             # Server side
             sampled_clients = self.handler.sample_clients()
             broadcast = self.handler.downlink_package
@@ -225,8 +227,8 @@ class EvalPipelineS1(StandalonePipeline):
                 self.handler.load(pack)
 
             loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            logging.info("Round {}, Loss {:.4f}, Test Accuracy {:.4f}".format(t, loss, acc))
-
+            logging.info("Loss {:.4f}, Test Accuracy {:.4f}".format(loss, acc))
+            
             if acc > self.best_performance:
                 self.best_performance = acc
                 logging.info(f'Best accuracy: {self.best_performance:.4f}')
@@ -236,7 +238,7 @@ class EvalPipelineS1(StandalonePipeline):
                 self.best_round_number = t
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
-            
+            logging.info("\n")
             self.loss.append(loss)
             self.acc.append(acc)
             t += 1
@@ -327,3 +329,8 @@ noisy_clients = list(vote[cnt.index(max(cnt))])
 logging.info(f"selected noisy clients: {noisy_clients}, real noisy clients: {np.where(gamma_s>0.)[0]}")
 clean_clients = list(set(user_id) - set(noisy_clients))
 logging.info(f"selected clean clients: {clean_clients}")
+
+############################################
+#    Stage 2 - Noise-Robust Training       #
+############################################
+
