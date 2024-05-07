@@ -47,6 +47,7 @@ class FedNoRoServerHandler(SyncServerHandler):
         serialized_parameters = DaAggregator.DaAgg(serialized_params_list=parameters_list, clean_clients=self.clean_clients, noisy_clients=self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
+
 class DaAggregator(object):
     def __init__(self, device=torch.device('cuda')):
         self.device = device
