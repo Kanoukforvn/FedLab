@@ -348,8 +348,8 @@ trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
 
 class EvalPipelineS2(StandalonePipeline):
-    def __init__(self, args, handler, trainer,noisy_clients, clean_clients, test_loader):
-        super().__init__(handler, trainer, noisy_clients, clean_clients)
+    def __init__(self, args, handler, trainer, test_loader, noisy_clients, clean_clients):
+        super().__init__(handler, trainer)
         self.test_loader = test_loader
         self.loss = []
         self.acc = []
