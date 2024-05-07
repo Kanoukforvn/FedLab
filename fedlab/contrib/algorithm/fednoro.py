@@ -86,9 +86,12 @@ class DaAggregator(object):
         # Calculate distance from noisy clients
         distance = torch.zeros(len(num_params))
         for n_idx in noisy_clients:
+            logging.info(n_idx)
             dis = []
+            logging.info(weights[0])
             for c_idx in clean_clients:
-                dis.append(DaAggregator.model_dist(serialized_params_list[n_idx], serialized_params_list[c_idx]))
+                logging.info(c_idx)
+                dis.append(DaAggregator.model_dist(weights[n_idx], weights[c_idx]))
             distance[n_idx] = min(dis)
         distance /= torch.max(distance)
 
