@@ -334,6 +334,10 @@ logging.info(f"selected clean clients: {clean_clients}")
 #    Stage 2 - Noise-Robust Training       #
 ############################################
 
+args.begin = 10
+args.end = 49
+args.a = 0.8
+
 args.com_round = 15
 args.sample_ratio = 0.1
 
@@ -361,7 +365,7 @@ class EvalPipelineS2(StandalonePipeline):
             broadcast = self.handler.downlink_package
             
             # Client side
-            self.trainer.local_process_s2(broadcast, sampled_clients)
+            self.trainer.local_process_s2(broadcast, sampled_clients, t, args.begin, args.end, args.a)
             uploads = self.trainer.uplink_package
 
             # Server side
