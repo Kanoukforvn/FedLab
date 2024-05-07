@@ -114,11 +114,13 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
             
             if id in clean_clients:
+                logging.info("Clean client")
                 w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
                 pack = [w_local, loss_local]
                 self.cache.append(pack)
 
             elif id in noisy_clients:
+                logging.info("Noisy client")
                 w_local, loss_local = self.train_fednoro(model_parameters.cuda(self.device), data_loader, weight_kd=weight_kd)
                 pack = [w_local, loss_local]
                 self.cache.append(pack)
@@ -152,9 +154,11 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
         return [SerializationTool.serialize_model(self._model), avg_epoch_loss]
 
     def train_fednoro(self, model_parameters, train_loader, weight_kd):
-        
-        self.student_net = self.set_model(model_parameters.cuda(self.device))
-        self.teacher_net = self.set_model(model_parameters.cuda(self.device))
+
+        self.set_model(model_parameters.cuda(self.device))
+
+        self.student_net = self._model
+        self.teacher_net = self._model
         
         self.student_net.train()
         self.teacher_net.eval()
