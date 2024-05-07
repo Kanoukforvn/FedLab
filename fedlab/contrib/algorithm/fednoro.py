@@ -44,7 +44,6 @@ class FedNoRoServerHandler(SyncServerHandler):
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
-        logging.info("weights: {}".format(weights))
         serialized_parameters = DaAggregator.DaAgg(parameters_list, weights, clean_clients=self.clean_clients, noisy_clients=self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
@@ -77,6 +76,17 @@ class DaAggregator(object):
         Returns:
             torch.Tensor: Aggregated serialized parameters.
         """
+
+        if weights is None:
+            weights = torch.ones(len(serialized_params_list))
+
+        if not isinstance(weights, torch.Tensor):
+            weights = torch.tensor(weights)
+
+        # Move weights to the same device as the first tensor in serialized_params_list
+        device = serialized_params_list[0].device
+        weights = weights.to(device)
+
         # Initialize client weights
         num_params = [len(params) for params in serialized_params_list]
         client_weight = torch.tensor(num_params, dtype=torch.float)
