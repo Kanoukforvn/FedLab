@@ -102,7 +102,7 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             pack = [w_local, loss_local]
             self.cache.append(pack)
 
-    def local_process_s2(self, payload, id_list, t, begin, end, a):
+    def local_process_s2(self, payload, id_list, t, begin, end, a, clean_clients, noisy_clients):
         model_parameters = payload[0]
         w_local, loss_local = [], []
 
@@ -113,12 +113,12 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             progress_bar.set_description(f"Training on client {id}", refresh=True)
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
             
-            if self.iteration <= self.warmup_rounds:
+            if id in clean_clients:
                 w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
                 pack = [w_local, loss_local]
                 self.cache.append(pack)
 
-            elif self.iteration <= self.warmup_rounds:
+            elif id in noisy_clients:
                 w_local, loss_local = self.train_fednoro(model_parameters.cuda(self.device), data_loader, weight_kd=weight_kd)
                 pack = [w_local, loss_local]
                 self.cache.append(pack)

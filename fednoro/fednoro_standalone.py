@@ -336,7 +336,7 @@ logging.info(f"selected clean clients: {clean_clients}")
 
 args.begin = 10
 args.end = 49
-args.a = 0.8
+args.a = 0.8        
 
 args.com_round = 15
 args.sample_ratio = 0.1
@@ -348,13 +348,16 @@ trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
 
 class EvalPipelineS2(StandalonePipeline):
-    def __init__(self, handler, trainer, test_loader):
-        super().__init__(handler, trainer)
+    def __init__(self, args, handler, trainer,noisy_clients, clean_clients, test_loader):
+        super().__init__(handler, trainer, noisy_clients, clean_clients)
         self.test_loader = test_loader
         self.loss = []
         self.acc = []
         self.best_performance = 0
-        
+        self.begin = args.begin
+        self.end = args.end
+        self.a = args.a
+    
     def main(self):
         t = 0
         while self.handler.if_stop is False:
@@ -365,7 +368,7 @@ class EvalPipelineS2(StandalonePipeline):
             broadcast = self.handler.downlink_package
             
             # Client side
-            self.trainer.local_process_s2(broadcast, sampled_clients, t, args.begin, args.end, args.a)
+            self.trainer.local_process_s2(broadcast, sampled_clients, t, self.begin, self.end, self.a)
             uploads = self.trainer.uplink_package
 
             # Server side
@@ -392,3 +395,22 @@ class EvalPipelineS2(StandalonePipeline):
         logging.info('Final best accuracy: {:.4f}, Best model number : {} '.format(self.best_performance, self.best_round_number))
 
 
+    def show(self):
+        plt.figure(figsize=(8, 4.5))
+        ax = plt.subplot(1, 2, 1)
+        ax.plot(np.arange(len(self.loss)), self.loss)
+        ax.set_xlabel("Communication Round")
+        ax.set_ylabel("Loss")
+        
+        ax2 = plt.subplot(1, 2, 2)
+        ax2.plot(np.arange(len(self.acc)), self.acc)
+        ax2.set_xlabel("Communication Round")
+        ax2.set_ylabel("Accuracy")
+
+        plt.savefig(f"./imgs/cifar10_dir_loss_accuracy_s1.png", dpi=400, bbox_inches = 'tight')
+        
+
+# Run evaluation
+eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, noisy_clients=noisy_clients, clean_clients=clean_clients, test_loader=test_loader, args=args)
+eval_pipeline_s2.main()
+eval_pipeline_s2.show()
