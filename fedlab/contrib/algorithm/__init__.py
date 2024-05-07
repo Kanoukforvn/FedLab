@@ -12,4 +12,4 @@ from .ifca import IFCASerialClientTrainer, IFCAServerHander
 from .powerofchoice import PowerofchoiceSerialClientTrainer, PowerofchoicePipeline, Powerofchoice
 from .qfedavg import qFedAvgClientTrainer, qFedAvgServerHandler
 from .scaffold import ScaffoldSerialClientTrainer, ScaffoldServerHandler
-from .fednoro import FedNoRoSerialClientTrainerS1
+from .fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler
