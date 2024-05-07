@@ -44,7 +44,7 @@ class FedNoRoServerHandler(SyncServerHandler):
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
-        serialized_parameters = DaAggregator.DaAgg(self, serialized_params_list=parameters_list, clean_clients=self.clean_clients, noisy_clients=self.noisy_clients)
+        serialized_parameters = self.DaAggregator.DaAgg(self, serialized_params_list=parameters_list, clean_clients=self.clean_clients, noisy_clients=self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
 
