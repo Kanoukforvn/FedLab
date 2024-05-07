@@ -31,6 +31,7 @@ class FedAvgServerHandler(SyncServerHandler):
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
+        logging.info(weights)
         serialized_parameters = Aggregators.fedavg_aggregate(parameters_list, weights)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
@@ -44,7 +45,6 @@ class FedNoRoServerHandler(SyncServerHandler):
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
-        logging.info(weights)
         serialized_parameters = DaAggregator.DaAgg(parameters_list, weights, clean_clients=self.clean_clients, noisy_clients=self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
