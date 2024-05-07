@@ -88,6 +88,8 @@ class DaAggregator(object):
         for n_idx in noisy_clients:
             dis = []
             for c_idx in clean_clients:
+                if c_idx >= len(weights) or n_idx >= len(weights):
+                    raise IndexError(f"Indices out of range: clean_clients={clean_clients}, noisy_clients={noisy_clients}")
                 dis.append(DaAggregator.model_dist(weights[n_idx], weights[c_idx]))
             distance[n_idx] = min(dis)
         distance /= torch.max(distance)
