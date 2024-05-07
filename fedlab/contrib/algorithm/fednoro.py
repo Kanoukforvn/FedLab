@@ -51,7 +51,7 @@ class FedNoRoServerHandler(SyncServerHandler):
 import torch
 
 class DaAggregator(object):
-    def __init__(self, device=torch.device('gpu')):
+    def __init__(self, device=torch.device('cuda')):
         self.device = device
 
     def model_dist(self, w_1, w_2):
