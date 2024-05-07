@@ -44,7 +44,7 @@ class FedNoRoServerHandler(SyncServerHandler):
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
-        serialized_parameters = self.DaAggregator.DaAgg(self, serialized_params_list=parameters_list, clean_clients=self.clean_clients, noisy_clients=self.noisy_clients)
+        serialized_parameters = DaAggregator.DaAgg(weights, serialized_params_list=parameters_list, clean_clients=self.clean_clients, noisy_clients=self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
 
@@ -52,7 +52,8 @@ class DaAggregator(object):
     def __init__(self, device=torch.device('cuda')):
         self.device = device
 
-    def model_dist(self, w_1, w_2):
+    @staticmethod
+    def model_dist(w_1, w_2):
         assert w_1.keys() == w_2.keys(), "Error: cannot compute distance between dicts with different keys"
         dist_total = torch.zeros(1).float()
         for key in w_1.keys():
@@ -63,7 +64,8 @@ class DaAggregator(object):
 
         return dist_total.cpu().item()
 
-    def DaAgg(self, serialized_params_list, clean_clients, noisy_clients):
+    @staticmethod
+    def DaAgg(serialized_params_list, weights, clean_clients, noisy_clients):
         """Data-aware aggregation
 
         Args:
@@ -79,12 +81,14 @@ class DaAggregator(object):
         client_weight = torch.tensor(num_params, dtype=torch.float)
         client_weight /= torch.sum(client_weight)
 
+        device = serialized_params_list[0].device
+
         # Calculate distance from noisy clients
         distance = torch.zeros(len(num_params))
         for n_idx in noisy_clients:
             dis = []
             for c_idx in clean_clients:
-                dis.append(self.model_dist(serialized_params_list[n_idx], serialized_params_list[c_idx]))
+                dis.append(DaAggregator.model_dist(weights[n_idx], weights[c_idx]))
             distance[n_idx] = min(dis)
         distance /= torch.max(distance)
 
@@ -93,7 +97,7 @@ class DaAggregator(object):
         client_weight /= torch.sum(client_weight)
 
         # Perform aggregation
-        serialized_params_list = [params.to(self.device) for params in serialized_params_list]
+        serialized_params_list = [params.to(device) for params in serialized_params_list]
         serialized_parameters = torch.sum(
             torch.stack(serialized_params_list, dim=-1) * client_weight, dim=-1)
 
