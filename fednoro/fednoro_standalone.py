@@ -26,7 +26,7 @@ from fedlab.models.mlp import MLP
 from fedlab.models.build_model import build_model
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files, get_output
-from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler
+from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler, FedAvgServerHandler
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 args = Munch
@@ -185,7 +185,7 @@ trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 from fedlab.utils.functional import evaluate, globaltest
 from fedlab.core.standalone import StandalonePipeline
 
-handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
+handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
 
 from torch import nn
 from torch.utils.data import DataLoader
@@ -219,7 +219,7 @@ class EvalPipelineS1(StandalonePipeline):
             broadcast = self.handler.downlink_package
             
             # Client side
-            self.trainer.local_process(broadcast, sampled_clients)
+            self.trainer.local_process_s1(broadcast, sampled_clients)
             uploads = self.trainer.uplink_package
 
             # Server side
@@ -238,7 +238,7 @@ class EvalPipelineS1(StandalonePipeline):
                 self.best_round_number = t
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
-            logging.info("\n")
+            
             self.loss.append(loss)
             self.acc.append(acc)
             t += 1
@@ -333,7 +333,7 @@ logging.info(f"selected clean clients: {clean_clients}")
 ############################################
 #    Stage 2 - Noise-Robust Training       #
 ############################################
-"""
+
 args.com_round = 15
 args.sample_ratio = 0.1
 
@@ -361,7 +361,7 @@ class EvalPipelineS2(StandalonePipeline):
             broadcast = self.handler.downlink_package
             
             # Client side
-            self.trainer.local_process(broadcast, sampled_clients)
+            self.trainer.local_process_s2(broadcast, sampled_clients)
             uploads = self.trainer.uplink_package
 
             # Server side
@@ -380,10 +380,11 @@ class EvalPipelineS2(StandalonePipeline):
                 self.best_round_number = t
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
-            logging.info("\n")
+
             self.loss.append(loss)
             self.acc.append(acc)
             t += 1
         
         logging.info('Final best accuracy: {:.4f}, Best model number : {} '.format(self.best_performance, self.best_round_number))
-"""
+
+

@@ -25,9 +25,17 @@ import numpy as np
 ##################
 
 
+class FedAvgServerHandler(SyncServerHandler):
+    """FedNoRo server handler."""
+    def global_update(self, buffer):
+        parameters_list = [ele[0] for ele in buffer]
+        weights = [ele[1] for ele in buffer]
+        serialized_parameters = Aggregators.fedavg_aggregate(parameters_list, weights)
+        SerializationTool.deserialize_model(self._model, serialized_parameters)
+
 class FedNoRoServerHandler(SyncServerHandler):
     """FedNoRo server handler."""
-    def global_update_s1(self, buffer):
+    def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
         serialized_parameters = Aggregators.fedavg_aggregate(parameters_list, weights)
@@ -99,9 +107,17 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
         for id in (progress_bar := tqdm(id_list)):
             progress_bar.set_description(f"Training on client {id}", refresh=True)
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
-            w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
-            pack = [w_local, loss_local]
-            self.cache.append(pack)
+            
+            if self.iteration <= self.warmup_rounds:
+                w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
+                pack = [w_local, loss_local]
+                self.cache.append(pack)
+
+            elif self.iteration <= self.warmup_rounds:
+                w_local, loss_local = self.train_fednoro(model_parameters.cuda(self.device), data_loader)
+                pack = [w_local, loss_local]
+                self.cache.append(pack)
+
 
     def train_LA(self, model_parameters, train_loader):
     
