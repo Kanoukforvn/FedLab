@@ -36,22 +36,16 @@ class FedAvgServerHandler(SyncServerHandler):
 
 class FedNoRoServerHandler(SyncServerHandler):
     """FedNoRo server handler."""
-    """
-    def __init__(self, device, noisy_clients = [1, 3], clean_clients = [ 0, 2, 4]): #FIXME raw value for security
-        self.device = device
+    def __init__(self, model, global_round, sample_ratio, cuda, noisy_clients, clean_clients):
+        super().__init__(model, global_round, sample_ratio, cuda)
         self.noisy_clients = noisy_clients
         self.clean_clients = clean_clients
-    """
+
     def global_update(self, buffer):
-        noisy_clients = [1, 3]
-        clean_clients = [ 0, 2, 4]
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
-        serialized_parameters = DaAggregator.DaAgg(parameters_list, clean_clients=clean_clients, noisy_clients=noisy_clients)
+        serialized_parameters = DaAggregator.DaAgg(parameters_list, clean_clients=self.clean_clients, noisy_clients=self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
-
-
-import torch
 
 class DaAggregator(object):
     def __init__(self, device=torch.device('cuda')):
