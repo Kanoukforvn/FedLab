@@ -357,7 +357,9 @@ class EvalPipelineS2(StandalonePipeline):
         self.begin = args.begin
         self.end = args.end
         self.a = args.a
-    
+        self.noisy_clients = noisy_clients
+        self.clean_clients = clean_clients
+
     def main(self):
         t = 0
         while self.handler.if_stop is False:
@@ -368,7 +370,16 @@ class EvalPipelineS2(StandalonePipeline):
             broadcast = self.handler.downlink_package
             
             # Client side
-            self.trainer.local_process_s2(broadcast, sampled_clients, t, self.begin, self.end, self.a)
+            self.trainer.local_process_s2(
+                broadcast, 
+                sampled_clients, 
+                t, 
+                begin=self.begin, 
+                end=self.end, 
+                a=self.a, 
+                noisy_clients=self.noisy_clients, 
+                clean_clients=self.clean_clients)
+            
             uploads = self.trainer.uplink_package
 
             # Server side
