@@ -31,7 +31,6 @@ class FedAvgServerHandler(SyncServerHandler):
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
-        logging.info(weights)
         serialized_parameters = Aggregators.fedavg_aggregate(parameters_list, weights)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
@@ -45,6 +44,7 @@ class FedNoRoServerHandler(SyncServerHandler):
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
+        logging.info("weights: {}".format(weights))
         serialized_parameters = DaAggregator.DaAgg(parameters_list, weights, clean_clients=self.clean_clients, noisy_clients=self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
@@ -67,8 +67,7 @@ class DaAggregator(object):
 
     @staticmethod
     def DaAgg(serialized_params_list, weights, clean_clients, noisy_clients):
-        """
-        Data-aware aggregation
+        """Data-aware aggregation
 
         Args:
             serialized_params_list (list[torch.Tensor]): List of serialized model parameters from each client.
@@ -91,20 +90,22 @@ class DaAggregator(object):
 
         # Initialize client weights
         num_params = [len(params) for params in serialized_params_list]
-        client_weight = torch.tensor(num_params, dtype=torch.float, device=device)
+        client_weight = torch.tensor(num_params, dtype=torch.float)
         client_weight /= torch.sum(client_weight)
 
-        # Calculate distance from noisy clients using tensor operations
-        noisy_weights = weights[noisy_clients]
-        clean_weights = weights[clean_clients]
-        distances = DaAggregator.model_dist(noisy_weights[:, None], clean_weights[None, :])
-        min_distances = torch.min(distances, dim=1).values
+        device = serialized_params_list[0].device
 
-        # Normalize distances
-        distances /= torch.max(distances)
+        # Calculate distance from noisy clients
+        distance = torch.zeros(len(num_params))
+        for n_idx in noisy_clients:
+            dis = []
+            for c_idx in clean_clients:
+                dis.append(DaAggregator.model_dist(weights[n_idx], weights[c_idx]))
+            distance[n_idx] = min(dis)
+        distance /= torch.max(distance)
 
         # Update client weights based on distance
-        client_weight *= torch.exp(-min_distances)
+        client_weight *= torch.exp(-distance)
         client_weight /= torch.sum(client_weight)
 
         # Perform aggregation
@@ -113,6 +114,7 @@ class DaAggregator(object):
             torch.stack(serialized_params_list, dim=-1) * client_weight, dim=-1)
 
         return serialized_parameters
+
 
 ##################
 #
