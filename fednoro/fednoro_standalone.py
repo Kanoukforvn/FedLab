@@ -345,7 +345,7 @@ trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
-handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
+handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, noisy_clients = noisy_clients, clean_clients=clean_clients)
 
 class EvalPipelineS2(StandalonePipeline):
     def __init__(self, args, handler, trainer, test_loader, noisy_clients, clean_clients):

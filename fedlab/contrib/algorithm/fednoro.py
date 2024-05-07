@@ -36,11 +36,70 @@ class FedAvgServerHandler(SyncServerHandler):
 
 class FedNoRoServerHandler(SyncServerHandler):
     """FedNoRo server handler."""
+    def __init__(self, device, noisy_clients = [1, 3], clean_clients = [ 0, 2, 4]): #FIXME raw value for security
+        self.device = device
+        self.noisy_clients = noisy_clients
+        self.clean_clients = clean_clients
+
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
-        serialized_parameters = Aggregators.fedavg_aggregate(parameters_list, weights)
+        serialized_parameters = DaAggregator.DaAgg(parameters_list, w_locals=weights)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
+
+
+import torch
+
+class DaAggregator(object):
+    def __init__(self, device=torch.device('gpu')):
+        self.device = device
+
+    def model_dist(self, w_1, w_2):
+        assert w_1.keys() == w_2.keys(), "Error: cannot compute distance between dicts with different keys"
+        dist_total = torch.zeros(1).float()
+        for key in w_1.keys():
+            if "int" in str(w_1[key].dtype):
+                continue
+            dist = torch.norm(w_1[key] - w_2[key])
+            dist_total += dist.cpu()
+
+        return dist_total.cpu().item()
+
+    def DaAgg(self, serialized_params_list, clean_clients, noisy_clients):
+        """Data-aware aggregation
+
+        Args:
+            serialized_params_list (list[torch.Tensor]): List of serialized model parameters from each client.
+            clean_clients (list[int]): List of indices of clean clients.
+            noisy_clients (list[int]): List of indices of noisy clients.
+
+        Returns:
+            torch.Tensor: Aggregated serialized parameters.
+        """
+        # Initialize client weights
+        num_params = [len(params) for params in serialized_params_list]
+        client_weight = torch.tensor(num_params, dtype=torch.float)
+        client_weight /= torch.sum(client_weight)
+
+        # Calculate distance from noisy clients
+        distance = torch.zeros(len(num_params))
+        for n_idx in noisy_clients:
+            dis = []
+            for c_idx in clean_clients:
+                dis.append(self.model_dist(serialized_params_list[n_idx], serialized_params_list[c_idx]))
+            distance[n_idx] = min(dis)
+        distance /= torch.max(distance)
+
+        # Update client weights based on distance
+        client_weight *= torch.exp(-distance)
+        client_weight /= torch.sum(client_weight)
+
+        # Perform aggregation
+        serialized_params_list = [params.to(self.device) for params in serialized_params_list]
+        serialized_parameters = torch.sum(
+            torch.stack(serialized_params_list, dim=-1) * client_weight, dim=-1)
+
+        return serialized_parameters
 
 
 ##################
@@ -114,13 +173,11 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
             
             if id in clean_clients:
-                logging.info("Clean client")
                 w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
                 pack = [w_local, loss_local]
                 self.cache.append(pack)
 
             elif id in noisy_clients:
-                logging.info("Noisy client")
                 w_local, loss_local = self.train_fednoro(model_parameters.cuda(self.device), data_loader, weight_kd=weight_kd)
                 pack = [w_local, loss_local]
                 self.cache.append(pack)
@@ -159,7 +216,7 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
 
         self.student_net = self._model
         self.teacher_net = self._model
-        
+
         self.student_net.train()
         self.teacher_net.eval()
 
