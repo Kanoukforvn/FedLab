@@ -88,7 +88,7 @@ class DaAggregator(object):
         for n_idx in noisy_clients:
             logging.info(n_idx)
             dis = []
-            logging.info(weights[0])
+            logging.info("weights 1 {}".format(weights[1]))
             for c_idx in clean_clients:
                 logging.info(c_idx)
                 dis.append(DaAggregator.model_dist(weights[n_idx], weights[c_idx]))
