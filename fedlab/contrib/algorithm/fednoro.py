@@ -44,6 +44,7 @@ class FedNoRoServerHandler(SyncServerHandler):
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
+        logging.info("weights: {}".format(weights))
         serialized_parameters = DaAggregator.DaAgg(parameters_list, weights, clean_clients=self.clean_clients, noisy_clients=self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
@@ -86,11 +87,8 @@ class DaAggregator(object):
         # Calculate distance from noisy clients
         distance = torch.zeros(len(num_params))
         for n_idx in noisy_clients:
-            logging.info(n_idx)
             dis = []
-            logging.info("weights 1 {}".format(weights[1]))
             for c_idx in clean_clients:
-                logging.info(c_idx)
                 dis.append(DaAggregator.model_dist(weights[n_idx], weights[c_idx]))
             distance[n_idx] = min(dis)
         distance /= torch.max(distance)
