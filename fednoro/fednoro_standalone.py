@@ -26,7 +26,7 @@ from fedlab.models.mlp import MLP
 from fedlab.models.build_model import build_model
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files, get_output
-from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainerS1, FedAvgServerHandler
+from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 args = Munch
@@ -178,14 +178,14 @@ from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDCli
 args.com_round = 15
 args.sample_ratio = 0.1
 
-trainer = FedNoRoSerialClientTrainerS1(model, args.total_client, cuda=args.cuda)
+trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
 from fedlab.utils.functional import evaluate, globaltest
 from fedlab.core.standalone import StandalonePipeline
 
-handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
+handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
 
 from torch import nn
 from torch.utils.data import DataLoader
@@ -213,7 +213,7 @@ class EvalPipelineS1(StandalonePipeline):
         t = 0
         while self.handler.if_stop is False:
             logging.info("Round {}".format(t))
-            
+
             # Server side
             sampled_clients = self.handler.sample_clients()
             broadcast = self.handler.downlink_package
@@ -333,4 +333,57 @@ logging.info(f"selected clean clients: {clean_clients}")
 ############################################
 #    Stage 2 - Noise-Robust Training       #
 ############################################
+"""
+args.com_round = 15
+args.sample_ratio = 0.1
 
+trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
+trainer.setup_dataset(fed_cifar10)
+trainer.setup_optim(args.epochs, args.batch_size, args.lr)
+
+handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
+
+class EvalPipelineS2(StandalonePipeline):
+    def __init__(self, handler, trainer, test_loader):
+        super().__init__(handler, trainer)
+        self.test_loader = test_loader
+        self.loss = []
+        self.acc = []
+        self.best_performance = 0
+        
+    def main(self):
+        t = 0
+        while self.handler.if_stop is False:
+            logging.info("Round {}".format(t))
+
+            # Server side
+            sampled_clients = self.handler.sample_clients()
+            broadcast = self.handler.downlink_package
+            
+            # Client side
+            self.trainer.local_process(broadcast, sampled_clients)
+            uploads = self.trainer.uplink_package
+
+            # Server side
+            for pack in uploads:
+                self.handler.load(pack)
+
+            loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
+            logging.info("Loss {:.4f}, Test Accuracy {:.4f}".format(loss, acc))
+            
+            if acc > self.best_performance:
+                self.best_performance = acc
+                logging.info(f'Best accuracy: {self.best_performance:.4f}')
+
+                # Save model state_dict
+                model_path = f'model/stage1_model_{t}.pth'
+                self.best_round_number = t
+                torch.save(self.handler.model.state_dict(), model_path)
+                # logging.info(f'Saved model state_dict to: {model_path}')
+            logging.info("\n")
+            self.loss.append(loss)
+            self.acc.append(acc)
+            t += 1
+        
+        logging.info('Final best accuracy: {:.4f}, Best model number : {} '.format(self.best_performance, self.best_round_number))
+"""

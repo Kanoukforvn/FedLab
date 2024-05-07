@@ -25,9 +25,9 @@ import numpy as np
 ##################
 
 
-class FedAvgServerHandler(SyncServerHandler):
-    """FedAvg server handler."""
-    def global_update(self, buffer):
+class FedNoRoServerHandler(SyncServerHandler):
+    """FedNoRo server handler."""
+    def global_update_s1(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
         serialized_parameters = Aggregators.fedavg_aggregate(parameters_list, weights)
@@ -40,7 +40,7 @@ class FedAvgServerHandler(SyncServerHandler):
 #
 ##################
         
-class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
+class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
 
     def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
                  warmup_rounds=15, lr_warmup=0.0003, epochs_warmup=5, lr=0.01, epochs=5, num_class = 10) -> None:
@@ -81,7 +81,7 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         
         return label_counts_per_client
 
-    def local_process(self, payload, id_list):
+    def local_process_s1(self, payload, id_list):
         model_parameters = payload[0]
         w_local, loss_local = [], []
 
@@ -92,6 +92,16 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
             pack = [w_local, loss_local]
             self.cache.append(pack)
 
+    def local_process_s2(self, payload, id_list):
+        model_parameters = payload[0]
+        w_local, loss_local = [], []
+
+        for id in (progress_bar := tqdm(id_list)):
+            progress_bar.set_description(f"Training on client {id}", refresh=True)
+            data_loader = self.dataset.get_dataloader(id, self.batch_size)
+            w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
+            pack = [w_local, loss_local]
+            self.cache.append(pack)
 
     def train_LA(self, model_parameters, train_loader):
     
@@ -120,3 +130,6 @@ class FedNoRoSerialClientTrainerS1(SGDSerialClientTrainer):
         self.iteration += 1
 
         return [SerializationTool.serialize_model(self._model), avg_epoch_loss]
+
+    def train_fednoro(self, model_parameters, train_loader):
+        pass
