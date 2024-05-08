@@ -70,7 +70,8 @@ class DaAggregator(object):
         self.device = device
 
     @staticmethod
-    def DaAgg(serialized_params_list, w, dict_len, clean_clients, noisy_clients):
+    def DaAgg(serialized_params_list, w, clean_clients, noisy_clients):
+        dict_len = [len(params) for params in serialized_params_list]
         client_weight = np.array(dict_len)
         client_weight = client_weight / client_weight.sum()
         distance = np.zeros(len(dict_len))
