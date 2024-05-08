@@ -79,13 +79,12 @@ class DaAggregator(object):
         client_weight = client_weight / torch.sum(client_weight)
         distance = torch.zeros(len(dict_len))
 
-        """
         for n_idx in noisy_clients:
             dis = []
             for c_idx in clean_clients:
                 dis.append(DaAggregator.model_dist(w[n_idx], w[c_idx])) 
             distance[n_idx] = min(dis)
-        """
+        
         distance = distance / torch.max(distance)
         client_weight = client_weight * torch.exp(-distance)
         client_weight = client_weight / torch.sum(client_weight)
