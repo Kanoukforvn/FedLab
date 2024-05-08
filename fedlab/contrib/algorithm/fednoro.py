@@ -29,6 +29,7 @@ import numpy as np
 class FedAvgServerHandler(SyncServerHandler):
     """FedNoRo server handler."""
     def global_update(self, buffer):
+        logging.info(buffer)
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
         serialized_parameters = Aggregators.fedavg_aggregate(parameters_list, weights)
@@ -42,6 +43,7 @@ class FedNoRoServerHandler(SyncServerHandler):
         self.clean_clients = clean_clients
 
     def global_update(self, buffer):
+        logging.info(buffer)
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
         serialized_parameters = DaAggregator.DaAgg(parameters_list, weights, clean_clients = self.clean_clients, noisy_clients = self.noisy_clients)
