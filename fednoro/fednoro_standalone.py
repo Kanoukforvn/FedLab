@@ -342,7 +342,8 @@ from tensorboardX import SummaryWriter
 
 args.begin = 10
 args.end = 49
-args.a = 0.8        
+args.a = 0.8 
+args.exp = "Fed"       
 
 args.com_round = 15
 args.sample_ratio = 0.1
