@@ -74,9 +74,9 @@ class DaAggregator(object):
 
     @staticmethod
     def DaAgg(w, clean_clients, noisy_clients):
-        print("Length of w:", len(w))
-        print("Length of clean_clients:", len(clean_clients))
-        print("Length of noisy_clients:", len(noisy_clients))
+        logging.info("Length of w:", len(w))
+        logging.info("Length of clean_clients:", len(clean_clients))
+        logging.info("Length of noisy_clients:", len(noisy_clients))
         
         dict_len = [len(params) for params in w]
         client_weight = torch.tensor(dict_len, dtype=torch.float32)
