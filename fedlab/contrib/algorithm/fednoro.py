@@ -49,6 +49,8 @@ class FedNoRoServerHandler(SyncServerHandler):
         
         logging.info("dict_list 0 {}".format(parameters_dict_list[0]))
         
+        logging.info("weights {}".format(weights))
+
         serialized_parameters = DaAggregator.DaAgg(parameters_dict_list, clean_clients = self.clean_clients, noisy_clients = self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
@@ -115,7 +117,8 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
 
     def local_process_s2(self, payload, id_list, t, begin, end, a, clean_clients, noisy_clients):
         model_parameters = payload[0]
-        w_local, loss_local = [], []
+
+        w_locals, loss_locals = [], []
 
         weight_kd = get_current_consistency_weight(
             t, begin, end) * a
@@ -126,14 +129,15 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             
             if id in clean_clients:
                 w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
-                pack = [w_local, loss_local]
-                self.cache.append(pack)
-
+               
             elif id in noisy_clients:
                 w_local, loss_local = self.train_fednoro(model_parameters.cuda(self.device), data_loader, weight_kd=weight_kd)
-                pack = [w_local, loss_local]
-                self.cache.append(pack)
-
+               
+            # store every updated model
+            w_locals.append(copy.deepcopy(w_local))
+            loss_locals.append(copy.deepcopy(loss_local))
+            pack = [w_locals, loss_locals]
+            self.cache.append(pack)
 
     def train_LA(self, model_parameters, train_loader):
     
