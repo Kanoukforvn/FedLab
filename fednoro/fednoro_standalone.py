@@ -438,7 +438,7 @@ eval_pipeline_s2.show()
 
 trainer_locals = []
 for id in user_id:
-    trainer_locals = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
+    trainer_locals.append(FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda))
 
 BACC = []
 for rnd in range(5, 15): #FIXME raw value
