@@ -43,7 +43,7 @@ class Aggregators(object):
         device = serialized_params_list[0].device
         weights = weights.to(device)
 
-        logging.info("in function :  {}".format(weights))
+        #logging.info("in function :  {}".format(weights))
 
         weights = weights / torch.sum(weights)
         assert torch.all(weights > 0), "weights should be non-negative values"

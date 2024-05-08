@@ -441,7 +441,7 @@ for id in user_id:
     trainer_locals = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
 
 BACC = []
-for rnd in range(args.s1, args.rounds):
+for rnd in range(5, 15): #FIXME raw value
     w_locals, loss_locals = [], []
     weight_kd = get_current_consistency_weight(
         rnd, args.begin, args.end) * args.a
