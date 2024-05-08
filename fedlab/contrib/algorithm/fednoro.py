@@ -42,10 +42,11 @@ class FedNoRoServerHandler(SyncServerHandler):
         self.clean_clients = clean_clients
 
     def global_update(self, buffer):
-        logging.info(buffer)
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
-        serialized_parameters = DaAggregator.DaAgg(parameters_list, clean_clients = self.clean_clients, noisy_clients = self.noisy_clients)
+        logging.info(parameters_list)        
+        parameters_dict_list = [{'param_name': tensor} for tensor in parameters_list]
+        serialized_parameters = DaAggregator.DaAgg(parameters_dict_list, clean_clients = self.clean_clients, noisy_clients = self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
 
