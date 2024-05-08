@@ -74,14 +74,20 @@ class DaAggregator(object):
 
     @staticmethod
     def DaAgg(w, clean_clients, noisy_clients):
+        print("Length of w:", len(w))
+        print("Length of clean_clients:", len(clean_clients))
+        print("Length of noisy_clients:", len(noisy_clients))
+        
         dict_len = [len(params) for params in w]
         client_weight = torch.tensor(dict_len, dtype=torch.float32)
         client_weight = client_weight / torch.sum(client_weight)
         distance = torch.zeros(len(dict_len))
 
         for n_idx in noisy_clients:
+            print("n_idx:", n_idx)
             dis = []
             for c_idx in clean_clients:
+                print("c_idx:", c_idx)
                 dis.append(DaAggregator.model_dist(w[n_idx], w[c_idx])) 
             distance[n_idx] = min(dis)
         
