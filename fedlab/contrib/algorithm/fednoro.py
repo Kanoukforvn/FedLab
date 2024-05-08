@@ -45,7 +45,7 @@ class FedNoRoServerHandler(SyncServerHandler):
         logging.info(buffer)
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
-        serialized_parameters = DaAggregator.DaAgg(parameters_list, weights, clean_clients = self.clean_clients, noisy_clients = self.noisy_clients)
+        serialized_parameters = DaAggregator.DaAgg(parameters_list, clean_clients = self.clean_clients, noisy_clients = self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
 

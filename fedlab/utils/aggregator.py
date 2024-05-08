@@ -73,36 +73,39 @@ class DaAggregator(object):
         self.device = device
 
     @staticmethod
-    def DaAgg(serialized_params_list, w, clean_clients, noisy_clients):
-        dict_len = [len(params) for params in serialized_params_list]
-        client_weight = np.array(dict_len)
-        client_weight = client_weight / client_weight.sum()
-        distance = np.zeros(len(dict_len))
+    def DaAgg(w, clean_clients, noisy_clients):
+        dict_len = [len(params) for params in w]
+        client_weight = torch.tensor(dict_len, dtype=torch.float32)
+        client_weight = client_weight / torch.sum(client_weight)
+        distance = torch.zeros(len(dict_len))
+
         for n_idx in noisy_clients:
             dis = []
             for c_idx in clean_clients:
-                dis.append(DaAggregator.model_dist(w[n_idx], w[c_idx]))
+                dis.append(DaAggregator.model_dist(w[n_idx], w[c_idx])) 
             distance[n_idx] = min(dis)
-        distance = distance / distance.max()
-        client_weight = client_weight * np.exp(-distance)
-        client_weight = client_weight / client_weight.sum()
-        # print(client_weight)
 
-        w_avg = copy.deepcopy(w[0])
-        for k in w_avg.keys():
+        distance = distance / torch.max(distance)
+        client_weight = client_weight * torch.exp(-distance)
+        client_weight = client_weight / torch.sum(client_weight)
+
+        w_avg = {}
+        for k in w[0].keys():
+            w_avg[k] = torch.zeros_like(w[0][k])
             w_avg[k] = w_avg[k] * client_weight[0] 
             for i in range(1, len(w)):
                 w_avg[k] += w[i][k] * client_weight[i]
+
+        # Serialize the aggregated parameters
+        serialized_parameters = [{} for _ in range(len(w_avg))]
+        for i, (key, value) in enumerate(w_avg.items()):
+            serialized_parameters[i] = value
+    
+        return serialized_parameters
+
         
         
-        # Move all tensors in serialized_params_list to the same device as weights
-        serialized_params_list = [params.to(DaAggregator.device) for params in serialized_params_list]
 
-        # Perform the aggregation operation
-        serialized_parameters = torch.sum(
-            torch.stack(serialized_params_list, dim=-1) * w_avg, dim=-1)
-
-        return w_avg
 
     @staticmethod
     def model_dist(w_1, w_2):
