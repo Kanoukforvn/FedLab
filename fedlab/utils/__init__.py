@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from .aggregator import Aggregators
+from .aggregator import Aggregators, DaAggregator
 from .logger import Logger
 from .message_code import MessageCode
 from .serialization import SerializationTool

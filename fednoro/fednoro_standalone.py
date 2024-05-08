@@ -46,6 +46,7 @@ args.cuda = True
 if args.dataname == "cifar10":
     args.n_classes = 10
 
+logging.info(str(args))
 
 logging.basicConfig(level=logging.INFO,
                         format='[%(asctime)s.%(msecs)03d] %(message)s', 
