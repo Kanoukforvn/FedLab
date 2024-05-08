@@ -5,7 +5,7 @@ from copy import deepcopy
 import torch
 from fedlab.core.client.trainer import ClientTrainer, SerialClientTrainer
 from fedlab.contrib.algorithm import SyncServerHandler, SGDSerialClientTrainer
-from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA_KD
+from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA_KD, DaAggregator
 from fedlab.utils.fednoro_utils import get_current_consistency_weight
 
 import logging
@@ -44,76 +44,9 @@ class FedNoRoServerHandler(SyncServerHandler):
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
-        logging.info("weights: {}".format(weights))
-        serialized_parameters = DaAggregator.DaAgg(parameters_list, weights, clean_clients=self.clean_clients, noisy_clients=self.noisy_clients)
+        serialized_parameters = DaAggregator.DaAgg(parameters_list, weights, self.clean_clients, self.noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
-
-class DaAggregator(object):
-    def __init__(self, device=torch.device('cuda')):
-        self.device = device
-
-    @staticmethod
-    def model_dist(w_1, w_2):
-        assert w_1.keys() == w_2.keys(), "Error: cannot compute distance between dicts with different keys"
-        dist_total = torch.zeros(1).float()
-        for key in w_1.keys():
-            if "int" in str(w_1[key].dtype):
-                continue
-            dist = torch.norm(w_1[key] - w_2[key])
-            dist_total += dist.cpu()
-
-        return dist_total.cpu().item()
-
-    @staticmethod
-    def DaAgg(serialized_params_list, weights, clean_clients, noisy_clients):
-        """Data-aware aggregation
-
-        Args:
-            serialized_params_list (list[torch.Tensor]): List of serialized model parameters from each client.
-            clean_clients (list[int]): List of indices of clean clients.
-            noisy_clients (list[int]): List of indices of noisy clients.
-
-        Returns:
-            torch.Tensor: Aggregated serialized parameters.
-        """
-
-        if weights is None:
-            weights = torch.ones(len(serialized_params_list))
-
-        if not isinstance(weights, torch.Tensor):
-            weights = torch.tensor(weights)
-
-        # Move weights to the same device as the first tensor in serialized_params_list
-        device = serialized_params_list[0].device
-        weights = weights.to(device)
-
-        # Initialize client weights
-        num_params = [len(params) for params in serialized_params_list]
-        client_weight = torch.tensor(num_params, dtype=torch.float)
-        client_weight /= torch.sum(client_weight)
-
-        device = serialized_params_list[0].device
-
-        # Calculate distance from noisy clients
-        distance = torch.zeros(len(num_params))
-        for n_idx in noisy_clients:
-            dis = []
-            for c_idx in clean_clients:
-                dis.append(DaAggregator.model_dist(weights[n_idx], weights[c_idx]))
-            distance[n_idx] = min(dis)
-        distance /= torch.max(distance)
-
-        # Update client weights based on distance
-        client_weight *= torch.exp(-distance)
-        client_weight /= torch.sum(client_weight)
-
-        # Perform aggregation
-        serialized_params_list = [params.to(device) for params in serialized_params_list]
-        serialized_parameters = torch.sum(
-            torch.stack(serialized_params_list, dim=-1) * client_weight, dim=-1)
-
-        return serialized_parameters
 
 
 ##################
