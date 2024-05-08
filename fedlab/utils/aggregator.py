@@ -79,12 +79,13 @@ class DaAggregator(object):
         client_weight = client_weight / torch.sum(client_weight)
         distance = torch.zeros(len(dict_len))
 
+        """
         for n_idx in noisy_clients:
             dis = []
             for c_idx in clean_clients:
                 dis.append(DaAggregator.model_dist(w[n_idx], w[c_idx])) 
             distance[n_idx] = min(dis)
-
+        """
         distance = distance / torch.max(distance)
         client_weight = client_weight * torch.exp(-distance)
         client_weight = client_weight / torch.sum(client_weight)
@@ -100,7 +101,7 @@ class DaAggregator(object):
         serialized_parameters = [{} for _ in range(len(w_avg))]
         for i, (key, value) in enumerate(w_avg.items()):
             serialized_parameters[i] = value
-    
+
         return serialized_parameters
 
         
