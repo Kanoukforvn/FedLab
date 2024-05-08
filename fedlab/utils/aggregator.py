@@ -15,6 +15,7 @@
 import torch
 import numpy as np
 import copy
+import logging
 
 class Aggregators(object):
     """Define the algorithm of parameters aggregation"""
@@ -41,7 +42,9 @@ class Aggregators(object):
         # Move weights to the same device as the first tensor in serialized_params_list
         device = serialized_params_list[0].device
         weights = weights.to(device)
-        
+
+        logging.info("in function :  {}".format(weights))
+
         weights = weights / torch.sum(weights)
         assert torch.all(weights > 0), "weights should be non-negative values"
 
