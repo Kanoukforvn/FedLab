@@ -318,7 +318,7 @@ logging.info(metrics)
 
 vote = []
 for i in range(9):
-    gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics)
+    gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics) #n_component variations tri du bruit
     gmm_pred = gmm.predict(metrics)
     noisy_clients = np.where(gmm_pred == np.argmax(gmm.means_.sum(1)))[0]
     noisy_clients = set(list(noisy_clients))
@@ -336,10 +336,6 @@ logging.info(f"selected clean clients: {clean_clients}")
 #    Stage 2 - Noise-Robust Training       #
 ############################################
 
-from tensorboardX import SummaryWriter
-
-
-
 args.begin = 10
 args.end = 49
 args.a = 0.8 
@@ -347,8 +343,6 @@ args.exp = "Fed"
 
 args.com_round = 15
 args.sample_ratio = 0.1
-
-writer, models_dir = set_output_files(args)
 
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
