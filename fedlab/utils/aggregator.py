@@ -97,16 +97,10 @@ class DaAggregator(object):
             for i in range(1, len(w)):
                 w_avg[k] += w[i][k] * client_weight[i]
 
-        # Serialize the aggregated parameters
-        serialized_parameters = [{} for _ in range(len(w_avg))]
-        for i, (key, value) in enumerate(w_avg.items()):
-            serialized_parameters[i] = value
+        # Stack all tensors into a single tensor
+        serialized_parameters = torch.stack([value for value in w_avg.values()], dim=-1)
 
         return serialized_parameters
-
-        
-        
-
 
     @staticmethod
     def model_dist(w_1, w_2):
