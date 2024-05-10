@@ -12,11 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import numpy as np
-import copy
-import logging
-
 class Aggregators(object):
     """Define the algorithm of parameters aggregation"""
 
@@ -67,126 +62,40 @@ class Aggregators(object):
         serialized_parameters = torch.mul(1 - alpha, server_param) + \
                                 torch.mul(alpha, new_param)
         return serialized_parameters
-    
-class DaAggregator(object):
-    def __init__(self, device=torch.device('cuda')):
-        self.device = device
 
+
+import torch
+import numpy as np
+
+class DaAggregator:
     @staticmethod
-    def DaAgg(w, clean_clients, noisy_clients):
-        logging.info("Length of w:", len(w))
-        logging.info("Length of clean_clients:", len(clean_clients))
-        logging.info("Length of noisy_clients:", len(noisy_clients))
-        
-        dict_len = [len(params) for params in w]
-        client_weight = torch.tensor(dict_len, dtype=torch.float32)
-        client_weight = client_weight / torch.sum(client_weight)
-        distance = torch.zeros(len(dict_len))
+    def DaAgg(parameters_list, weights, clean_clients, noisy_clients):
+        # Define the client-wise distance metric
+        def compute_distance(wi, wj):
+            return torch.norm(wi - wj, p=2)
 
-        for n_idx in noisy_clients:
-            print("n_idx:", n_idx)
-            dis = []
-            for c_idx in clean_clients:
-                print("c_idx:", c_idx)
-                dis.append(DaAggregator.model_dist(w[n_idx], w[c_idx])) 
-            distance[n_idx] = min(dis)
-        
-        distance = distance / torch.max(distance)
-        client_weight = client_weight * torch.exp(-distance)
-        client_weight = client_weight / torch.sum(client_weight)
+        distances = []
+        for i, wi in enumerate(parameters_list):
+            min_distance = min(compute_distance(wi.cpu(), wj.cpu()) for j, wj in enumerate(parameters_list) if j in clean_clients)
+            distances.append(min_distance)
 
-        w_avg = {}
-        for k in w[0].keys():
-            w_avg[k] = torch.zeros_like(w[0][k])
-            w_avg[k] = w_avg[k] * client_weight[0] 
-            for i in range(1, len(w)):
-                w_avg[k] += w[i][k] * client_weight[i]
+        max_distance = max(distances) if distances else 1  # Avoid division by zero
+        normalized_distances = [d / max_distance for d in distances]
 
-        # Stack all tensors into a single tensor
-        serialized_parameters = torch.stack([value for value in w_avg.values()], dim=-1)
+        aggregation_weights = []
+        for i, d in enumerate(normalized_distances):
+            if i in clean_clients:
+                aggregation_weights.append(1.0)
+            elif i in noisy_clients:
+                aggregation_weights.append(np.exp(-d.cpu().item()))
+            else:
+                aggregation_weights.append(0.0)
 
-        return serialized_parameters
+        # Normalize aggregation weights
+        total_weights = sum(aggregation_weights)
+        normalized_weights = [w / total_weights for w in aggregation_weights]
 
-    @staticmethod
-    def model_dist(w_1, w_2):
-        assert w_1.keys() == w_2.keys(), "Error: cannot compute distance between dict with different keys"
-        dist_total = torch.zeros(1).float()
-        for key in w_1.keys():
-            if "int" in str(w_1[key].dtype):
-                continue
-            dist = torch.norm(w_1[key] - w_2[key])
-            dist_total += dist.cpu()
+        # Aggregate local models
+        global_model = sum(parameters_list[i].cpu() * weight for i, weight in enumerate(normalized_weights))
 
-        return dist_total.cpu().item()
-
-
-    """
-
-    @staticmethod
-    def model_dist(w_1, w_2):
-        assert w_1.keys() == w_2.keys(), "Error: cannot compute distance between dicts with different keys"
-        dist_total = torch.zeros(1).float()
-        for key in w_1.keys():
-            if "int" in str(w_1[key].dtype):
-                continue
-            dist = torch.norm(w_1[key] - w_2[key])
-            dist_total += dist.cpu()
-
-        return dist_total.cpu().item()
-
-    @staticmethod
-    def DaAgg(serialized_params_list, weights, clean_clients, noisy_clients):
-    
-       
-        
-        Data-aware aggregation
-
-        Args:
-            serialized_params_list (list[torch.Tensor]): List of serialized model parameters from each client.
-            clean_clients (list[int]): List of indices of clean clients.
-            noisy_clients (list[int]): List of indices of noisy clients.
-
-        Returns:
-            torch.Tensor: Aggregated serialized parameters.
-        
-        
-        
-
-        if weights is None:
-            weights = torch.ones(len(serialized_params_list))
-
-        if not isinstance(weights, torch.Tensor):
-            weights = torch.tensor(weights)
-
-        # Move weights to the same device as the first tensor in serialized_params_list
-        device = serialized_params_list[0].device
-        weights = weights.to(device)
-
-        # Initialize client weights
-        num_params = [len(params) for params in serialized_params_list]
-        client_weight = torch.tensor(num_params, dtype=torch.float)
-        client_weight /= torch.sum(client_weight)
-
-        device = serialized_params_list[0].device
-
-        # Calculate distance from noisy clients
-        distance = torch.zeros(len(num_params))
-        for n_idx in noisy_clients:
-            dis = []
-            for c_idx in clean_clients:
-                dis.append(DaAggregator.model_dist(weights[n_idx], weights[c_idx]))
-            distance[n_idx] = min(dis)
-        distance /= torch.max(distance)
-
-        # Update client weights based on distance
-        client_weight *= torch.exp(-distance)
-        client_weight /= torch.sum(client_weight)
-
-        # Perform aggregation
-        serialized_params_list = [params.to(device) for params in serialized_params_list]
-        serialized_parameters = torch.sum(
-            torch.stack(serialized_params_list, dim=-1) * client_weight, dim=-1)
-
-        return serialized_parameters
-
-        """
+        return global_model

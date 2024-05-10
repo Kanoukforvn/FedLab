@@ -14,6 +14,7 @@
 
 from copy import deepcopy
 import torch
+import logging
 from tqdm import tqdm
 from ...core.client.trainer import ClientTrainer, SerialClientTrainer
 from ...utils import Logger, SerializationTool

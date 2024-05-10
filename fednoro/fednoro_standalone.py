@@ -22,7 +22,6 @@ sys.path.append(project_root)
 
 # configuration
 from munch import Munch
-from fedlab.models.mlp import MLP
 from fedlab.models.build_model import build_model
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA_KD, DaAggregator
@@ -47,14 +46,14 @@ args.cuda = True
 if args.dataname == "cifar10":
     args.n_classes = 10
 
-logging.info(str(args))
+#logging.info(str(args))
 
 logging.basicConfig(level=logging.INFO,
                         format='[%(asctime)s.%(msecs)03d] %(message)s', 
                         datefmt='%H:%M:%S',
                         stream=sys.stdout)
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+#logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 
 # We provide a example usage of patitioned CIFAR10 dataset
@@ -178,7 +177,7 @@ from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDCli
 
 # Create client trainer and server handler
 args.com_round = 5
-args.sample_ratio = 0.1
+args.sample_ratio = 1
 
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
@@ -187,7 +186,11 @@ trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 from fedlab.utils.functional import evaluate, globaltest
 from fedlab.core.standalone import StandalonePipeline
 
-handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda)
+handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
+
+
+from fedlab.utils.functional import evaluate, globaltest
+from fedlab.core.standalone import StandalonePipeline
 
 from torch import nn
 from torch.utils.data import DataLoader
@@ -214,7 +217,7 @@ class EvalPipelineS1(StandalonePipeline):
     def main(self):
         t = 0
         while self.handler.if_stop is False:
-            logging.info("Round {}".format(t))
+            logging.info("Round {}".format(t+1))
 
             # Server side
             sampled_clients = self.handler.sample_clients()
@@ -342,16 +345,16 @@ args.a = 0.8
 args.exp = "Fed"       
 
 args.com_round = 15
-args.sample_ratio = 0.1
+args.sample_ratio = 1
 
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
-handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, noisy_clients = noisy_clients, clean_clients=clean_clients)
+handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client) # noisy_clients = noisy_clients, clean_clients=clean_clients
 
 class EvalPipelineS2(StandalonePipeline):
-    def __init__(self, args, handler, trainer, test_loader, noisy_clients, clean_clients):
+    def __init__(self, args, handler, trainer, test_loader, clean_clients, noisy_clients):
         super().__init__(handler, trainer)
         self.test_loader = test_loader
         self.loss = []
@@ -366,12 +369,14 @@ class EvalPipelineS2(StandalonePipeline):
     def main(self):
         t = 0
         while self.handler.if_stop is False:
-            logging.info("Round {}".format(t))
+            logging.info("Round {}".format(t+1))
 
             # Server side
             sampled_clients = self.handler.sample_clients()
             broadcast = self.handler.downlink_package
-            
+
+            logging.info("Training on K={} clients".format(len(sampled_clients)))
+
             # Client side
             self.trainer.local_process_s2(
                 broadcast, 
@@ -387,7 +392,7 @@ class EvalPipelineS2(StandalonePipeline):
 
             # Server side
             for pack in uploads:
-                self.handler.load(pack)
+                self.handler.load(pack, self.clean_clients, self.noisy_clients)
 
             loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
             logging.info("Loss {:.4f}, Test Accuracy {:.4f}".format(loss, acc))
@@ -421,7 +426,7 @@ class EvalPipelineS2(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuracy")
 
-        plt.savefig(f"./imgs/cifar10_dir_loss_accuracy_s1.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/cifar10_dir_loss_accuracy_s2.png", dpi=400, bbox_inches = 'tight')
         
 # Run evaluation
 eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, noisy_clients=noisy_clients, clean_clients=clean_clients, test_loader=test_loader, args=args)

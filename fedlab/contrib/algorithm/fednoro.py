@@ -36,23 +36,45 @@ class FedAvgServerHandler(SyncServerHandler):
 
 class FedNoRoServerHandler(SyncServerHandler):
     """FedNoRo server handler."""
-    def __init__(self, model, global_round, sample_ratio, cuda, noisy_clients, clean_clients):
-        super().__init__(model, global_round, sample_ratio, cuda)
+    """
+    def __init__(self, model, global_round, sample_ratio, cuda, noisy_clients, clean_clients, num_clients):
+        super().__init__(model, global_round, sample_ratio, cuda, num_clients)
         self.noisy_clients = noisy_clients
         self.clean_clients = clean_clients
-
-    def global_update(self, buffer):
+    """
+    def global_update_daagg(self, buffer, clean_clients, noisy_clients):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]        
-        parameters_dict_list = [{'param_name': tensor} for tensor in parameters_list]
-        logging.info("dict_list {}".format(parameters_dict_list))
-        
-        logging.info("dict_list 0 {}".format(parameters_dict_list[0]))
-        
-        logging.info("weights {}".format(weights))
-
-        serialized_parameters = DaAggregator.DaAgg(parameters_dict_list, clean_clients = self.clean_clients, noisy_clients = self.noisy_clients)
+        serialized_parameters = DaAggregator.DaAgg(parameters_list, weights, clean_clients, noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
+
+    def load(self, payload: List[torch.Tensor], clean_clients, noisy_clients) -> bool:
+        """Update global model with collected parameters from clients.
+
+        Note:
+            Server handler will call this method when its ``client_buffer_cache`` is full. User can
+            overwrite the strategy of aggregation to apply on :attr:`model_parameters_list`, and
+            use :meth:`SerializationTool.deserialize_model` to load serialized parameters after
+            aggregation into :attr:`self._model`.
+
+        Args:
+            payload (list[torch.Tensor]): A list of tensors passed by manager layer.
+        """
+        assert len(payload) > 0
+        self.client_buffer_cache.append(deepcopy(payload))
+
+        assert len(self.client_buffer_cache) <= self.num_clients_per_round
+
+        if len(self.client_buffer_cache) == self.num_clients_per_round:
+            self.global_update_daagg(self.client_buffer_cache, clean_clients, noisy_clients)
+            self.round += 1
+
+            # reset cache
+            self.client_buffer_cache = []
+
+            return True  # return True to end this round.
+        else:
+            return False
 
 
 
@@ -124,21 +146,22 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             t, begin, end) * a
 
         for id in (progress_bar := tqdm(id_list)):
-            progress_bar.set_description(f"Training on client {id}", refresh=True)
+            
+            
             data_loader = self.dataset.get_dataloader(id, self.batch_size)
             
             if id in clean_clients:
+                progress_bar.set_description(f"Training on clean client {id}", refresh=True)
                 w_local, loss_local = self.train_LA(model_parameters.cuda(self.device), data_loader)
-               
+                pack = [w_local, loss_local]
+                self.cache.append(pack)
+            
             elif id in noisy_clients:
+                progress_bar.set_description(f"Training on noisy client {id}", refresh=True)
                 w_local, loss_local = self.train_fednoro(model_parameters.cuda(self.device), data_loader, weight_kd=weight_kd)
-               
-            # store every updated model
-            w_locals.append(copy.deepcopy(w_local))
-            loss_locals.append(copy.deepcopy(loss_local))
-            pack = [w_locals, loss_locals]
-            self.cache.append(pack)
-
+                pack = [w_local, loss_local]
+                self.cache.append(pack)
+            
     def train_LA(self, model_parameters, train_loader):
     
         self.set_model(model_parameters.cuda(self.device))
