@@ -247,7 +247,7 @@ class EvalPipelineS1(StandalonePipeline):
                 self.handler.load(pack)
 
             pred = globaltest(copy.deepcopy(model).to(
-                args.device), fed_cifar10.targets_test, args)
+                args.device), self.test_loader, args)
 
             loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
             bacc = balanced_accuracy_score(self.handler.model, pred)  # Calculate balanced accuracy
