@@ -53,7 +53,7 @@ logging.basicConfig(level=logging.INFO,
                         datefmt='%H:%M:%S',
                         stream=sys.stdout)
 
-#logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 
 # We provide a example usage of patitioned CIFAR10 dataset
