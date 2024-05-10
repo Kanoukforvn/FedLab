@@ -31,7 +31,7 @@ from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 args = Munch
 
-args.total_client = 5
+args.total_client = 20
 args.alpha = 2
 args.seed = 1
 args.preprocess = True
@@ -121,6 +121,19 @@ plt.xlabel('sample num')
 plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_10clients.png", dpi=400, bbox_inches = 'tight')
 plt.show()
 
+from matplotlib import pyplot as plt
+from fedlab.utils.dataset.functional import feddata_scatterplot
+
+title = 'Data Distribution over Clients for Each Class'
+fig = feddata_scatterplot(fed_cifar10.targets_train,
+                          fed_cifar10.data_indices_train,
+                          args.total_client,
+                          args.n_classes,
+                          figsize=(6, 4),
+                          max_size=200,
+                          title=title)
+fig.savefig(f'./imgs/feddata-scatterplot-vis.png') 
+
 
 ############################################
 #            Noise Generation              #
@@ -176,7 +189,7 @@ logging.info("\n ---------------------begin training---------------------")
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
 
 # Create client trainer and server handler
-args.com_round = 5
+args.com_round = 15
 args.sample_ratio = 1
 
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
@@ -212,8 +225,10 @@ class EvalPipelineS1(StandalonePipeline):
         self.test_loader = test_loader
         self.loss = []
         self.acc = []
+        self.bacc = []
         self.best_performance = 0
-        
+        self.best_balanced_accuracy = 0
+
     def main(self):
         t = 0
         while self.handler.if_stop is False:
@@ -231,21 +246,31 @@ class EvalPipelineS1(StandalonePipeline):
             for pack in uploads:
                 self.handler.load(pack)
 
+            pred = globaltest(copy.deepcopy(model).to(
+                args.device), dataset_test, args)
+
             loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            logging.info("Loss {:.4f}, Test Accuracy {:.4f}".format(loss, acc))
+            bacc = balanced_accuracy_score(self.handler.model, pred)  # Calculate balanced accuracy
+            logging.info("Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
             
             if acc > self.best_performance:
                 self.best_performance = acc
                 logging.info(f'Best accuracy: {self.best_performance:.4f}')
+
+            if bacc > self.best_balanced_accuracy:
+                self.best_balanced_accuracy = bacc
+                logging.info(f'Best balanced accuracy: {self.best_balanced_accuracy:.4f}')
 
                 # Save model state_dict
                 model_path = f'model/stage1_model_{t}.pth'
                 self.best_round_number = t
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
-            
+
+
             self.loss.append(loss)
             self.acc.append(acc)
+            self.bacc.append(bacc)
             t += 1
         
         logging.info('Final best accuracy: {:.4f}, Best model number : {} '.format(self.best_performance, self.best_round_number))
@@ -321,7 +346,7 @@ logging.info(metrics)
 
 vote = []
 for i in range(9):
-    gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics) #n_component variations tri du bruit
+    gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics) #n_component classement niveau de bruit
     gmm_pred = gmm.predict(metrics)
     noisy_clients = np.where(gmm_pred == np.argmax(gmm.means_.sum(1)))[0]
     noisy_clients = set(list(noisy_clients))
@@ -344,14 +369,14 @@ args.end = 49
 args.a = 0.8 
 args.exp = "Fed"       
 
-args.com_round = 15
+args.com_round = 100
 args.sample_ratio = 1
 
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
-handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client) # noisy_clients = noisy_clients, clean_clients=clean_clients
+handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)
 
 class EvalPipelineS2(StandalonePipeline):
     def __init__(self, args, handler, trainer, test_loader, clean_clients, noisy_clients):
@@ -359,7 +384,9 @@ class EvalPipelineS2(StandalonePipeline):
         self.test_loader = test_loader
         self.loss = []
         self.acc = []
+        #self.bacc = []
         self.best_performance = 0
+        #self.best_balanced_accuracy = 0
         self.begin = args.begin
         self.end = args.end
         self.a = args.a
@@ -395,6 +422,7 @@ class EvalPipelineS2(StandalonePipeline):
                 self.handler.load(pack, self.clean_clients, self.noisy_clients)
 
             loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
+            #bacc = balanced_accuracy_score(self.handler.model, self.test_loader)  # Calculate balanced accuracy
             logging.info("Loss {:.4f}, Test Accuracy {:.4f}".format(loss, acc))
             
             if acc > self.best_performance:
@@ -407,8 +435,13 @@ class EvalPipelineS2(StandalonePipeline):
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
 
+            # Update best balanced accuracy
+            #if bacc > self.best_balanced_accuracy:
+            #    self.best_balanced_accuracy = bacc
+
             self.loss.append(loss)
             self.acc.append(acc)
+            #self.bacc.append(bacc)
             t += 1
         
         logging.info('Final best accuracy: {:.4f}, Best model number : {} '.format(self.best_performance, self.best_round_number))

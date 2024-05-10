@@ -593,9 +593,9 @@ def partition_report(targets, data_indices, class_num=None, verbose=True, file=N
     stats_df = pd.DataFrame(stats_rows)
     if file is not None:
         stats_df.to_csv(file, header=True, index=False)
-    if verbose:
-        print("Class sample statistics:")
-        print(stats_df)
+    #if verbose:
+        #print("Class sample statistics:")
+        #print(stats_df)
 
     return stats_df
 
