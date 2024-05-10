@@ -250,7 +250,7 @@ class EvalPipelineS1(StandalonePipeline):
                 args.device), self.test_loader, args)
 
             loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            bacc = balanced_accuracy_score(self.handler.model, pred)  # Calculate balanced accuracy
+            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)  # Calculate balanced accuracy
             logging.info("Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
             
             if acc > self.best_performance:
