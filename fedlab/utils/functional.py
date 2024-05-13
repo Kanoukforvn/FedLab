@@ -75,14 +75,14 @@ def evaluate(model, criterion, test_loader):
 
     return loss_.avg, acc_.avg
 
-def globaltest(net, test_loader, args):
-    net.eval()
+def globaltest(model, test_loader, args):
+    model.eval()
     pred = np.array([])
     with torch.no_grad():
         for images, labels in test_loader:
             images = images.to(args.device)
             labels = labels.to(args.device)
-            outputs = net(images)
+            outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             pred = np.concatenate([pred, predicted.detach().cpu().numpy()], axis=0)
     return pred

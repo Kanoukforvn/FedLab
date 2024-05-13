@@ -252,21 +252,20 @@ class EvalPipelineS1(StandalonePipeline):
             loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)  # Calculate balanced accuracy
             logging.info("Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
-            
-            if acc > self.best_performance:
-                self.best_performance = acc
-                logging.info(f'Best accuracy: {self.best_performance:.4f}')
 
             if bacc > self.best_balanced_accuracy:
                 self.best_balanced_accuracy = bacc
                 logging.info(f'Best balanced accuracy: {self.best_balanced_accuracy:.4f}')
+
+            if acc > self.best_performance:
+                self.best_performance = acc
+                logging.info(f'Best accuracy: {self.best_performance:.4f}')
 
                 # Save model state_dict
                 model_path = f'model/stage1_model_{t}.pth'
                 self.best_round_number = t
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
-
 
             self.loss.append(loss)
             self.acc.append(acc)
