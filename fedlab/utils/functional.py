@@ -19,7 +19,6 @@ import json
 import pynvml
 import random
 import numpy as np
-from collections import Counter
 
 
 def setup_seed(seed):
@@ -28,7 +27,6 @@ def setup_seed(seed):
     np.random.seed(seed)
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
-
 
 class AverageMeter(object):
     """Record metrics information"""
@@ -53,13 +51,15 @@ def evaluate(model, criterion, test_loader):
     """Evaluate classify task model accuracy.
 
     Returns:
-        (loss.sum, acc.avg)
+        (loss.sum, acc.avg, balanced_acc.avg)
     """
     model.eval()
     gpu = next(model.parameters()).device
 
     loss_ = AverageMeter()
     acc_ = AverageMeter()
+    balanced_acc_ = AverageMeter()  # Added for balanced accuracy
+
     with torch.no_grad():
         for inputs, labels in test_loader:
             batch_size = len(labels)
@@ -73,10 +73,22 @@ def evaluate(model, criterion, test_loader):
             loss_.update(loss.item(), batch_size)
             acc_.update(torch.sum(predicted.eq(labels)).item() / batch_size, batch_size)
 
-    return loss_.avg, acc_.avg
+            # Calculate balanced accuracy
+            class_correct = [0] * outputs.size(1)
+            class_total = [0] * outputs.size(1)
+            for i in range(batch_size):
+                label = labels[i]
+                pred = predicted[i]
+                class_correct[label] += (pred == label).item()
+                class_total[label] += 1
+            class_balanced_acc = [class_correct[i] / class_total[i] if class_total[i] > 0 else 0
+                                  for i in range(outputs.size(1))]
+            balanced_acc_.update(sum(class_balanced_acc) / len(class_balanced_acc), batch_size)
+
+    return loss_.avg, acc_.avg, balanced_acc_.avg
 
 def globaltest(model, test_loader, args):
-    model.eval()
+    
     pred = np.array([])
     with torch.no_grad():
         for images, labels in test_loader:

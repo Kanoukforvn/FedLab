@@ -242,15 +242,12 @@ class EvalPipelineS1(StandalonePipeline):
             self.trainer.local_process_s1(broadcast, sampled_clients)
             uploads = self.trainer.uplink_package
 
+
             # Server side
             for pack in uploads:
                 self.handler.load(pack)
 
-            pred = globaltest(copy.deepcopy(model).to(
-                args.device), self.test_loader, args)
-
-            loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)  # Calculate balanced accuracy
+            loss, acc, bacc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
             logging.info("Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
 
             if bacc > self.best_balanced_accuracy:
