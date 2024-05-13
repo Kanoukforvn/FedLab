@@ -429,6 +429,7 @@ class EvalPipelineS2(StandalonePipeline):
             # Update best balanced accuracy
             if bacc > self.best_balanced_accuracy:
                 self.best_balanced_accuracy = bacc
+                logging.info(f'Best balanced accuracy: {self.best_balanced_accuracy:.4f}')
                 # Save model state_dict
                 model_path = f'model/stage2_model_{t}.pth'
                 self.best_round_number = t
