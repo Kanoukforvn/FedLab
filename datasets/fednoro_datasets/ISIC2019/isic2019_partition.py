@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import torchvision
 from fedlab.utils.dataset.partition import ISICPartitioner
 from fedlab.utils.dataset import functional as F
+from PIL import Image
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(project_root)
