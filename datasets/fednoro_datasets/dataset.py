@@ -4,8 +4,7 @@ import torchvision.transforms as transforms
 
 from .all_datasets import isic2019, ICH
 
-from utils.sampling import iid_sampling, non_iid_dirichlet_sampling
-
+from fedlab.utils.sampling import iid_sampling, non_iid_dirichlet_sampling
 
 def get_dataset(args):
     if args.dataset == "isic2019":
