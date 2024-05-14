@@ -139,9 +139,9 @@ fig.savefig(f'./imgs/feddata-scatterplot-vis.png')
 #            Noise Generation              #
 ############################################
 
-args.level_n_lowerb = 0.3
-args.level_n_upperb = 0.5
-args.level_n_system = 0.4
+args.level_n_lowerb = 0.5
+args.level_n_upperb = 0.7
+args.level_n_system = 0.6
 args.n_type = "random"
 
 y_train = np.array(fed_cifar10.targets_train)
