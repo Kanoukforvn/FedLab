@@ -447,3 +447,36 @@ class CovtypePartitioner(BasicPartitioner):
     """
     num_features = 54
     num_classes = 2
+
+class ISICPartitioner(VisionPartitioner):
+    """Data partitioner for ISIC 2019 dataset.
+
+    Inherits from VisionPartitioner and customized for the ISIC 2019 dataset.
+
+    Args:
+        targets (list or numpy.ndarray): Sample targets. Unshuffled preferred.
+        num_clients (int): Number of clients for partition.
+        partition (str): Partition name. Supports partition schemes suitable for ISIC dataset.
+        dir_alpha (float): Parameter alpha for Dirichlet distribution.
+        major_classes_num (int): Number of major class for each clients.
+        verbose (bool): Whether output intermediate information. Default as ``True``.
+        seed (int): Random seed. Default as ``None``.
+
+    Returns:
+        dict: ``{ client_id: indices}``.
+    """
+    num_classes = 9
+
+    def __init__(self, targets, num_clients,
+                 partition='noniid-#label',                 
+                 dir_alpha=None,
+                 major_classes_num=None,
+                 verbose=True,
+                 seed=None):
+        super(ISICPartitioner, self).__init__(targets=targets, num_clients=num_clients,
+                                              partition=partition,
+                                              dir_alpha=dir_alpha,
+                                              major_classes_num=major_classes_num,
+                                              verbose=verbose,
+                                              seed=seed)
+

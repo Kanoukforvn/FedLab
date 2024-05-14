@@ -17,3 +17,4 @@ from .partition import CIFAR10Partitioner, CIFAR100Partitioner, FMNISTPartitione
     SVHNPartitioner
 from .partition import FCUBEPartitioner
 from .partition import AdultPartitioner, RCV1Partitioner, CovtypePartitioner
+from .partition import ISICPartitioner

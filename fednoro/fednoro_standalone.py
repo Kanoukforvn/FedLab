@@ -242,20 +242,13 @@ class EvalPipelineS1(StandalonePipeline):
             self.trainer.local_process_s1(broadcast, sampled_clients)
             uploads = self.trainer.uplink_package
 
+
             # Server side
             for pack in uploads:
                 self.handler.load(pack)
 
-            pred = globaltest(copy.deepcopy(model).to(
-                args.device), self.test_loader, args)
-
-            loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)  # Calculate balanced accuracy
+            loss, acc, bacc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
             logging.info("Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
-            
-            if acc > self.best_performance:
-                self.best_performance = acc
-                logging.info(f'Best accuracy: {self.best_performance:.4f}')
 
             if bacc > self.best_balanced_accuracy:
                 self.best_balanced_accuracy = bacc
@@ -267,6 +260,10 @@ class EvalPipelineS1(StandalonePipeline):
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
 
+
+            if acc > self.best_performance:
+                self.best_performance = acc
+                logging.info(f'Best accuracy: {self.best_performance:.4f}')
 
             self.loss.append(loss)
             self.acc.append(acc)
@@ -384,9 +381,9 @@ class EvalPipelineS2(StandalonePipeline):
         self.test_loader = test_loader
         self.loss = []
         self.acc = []
-        #self.bacc = []
+        self.bacc = []
         self.best_performance = 0
-        #self.best_balanced_accuracy = 0
+        self.best_balanced_accuracy = 0
         self.begin = args.begin
         self.end = args.end
         self.a = args.a
@@ -421,27 +418,28 @@ class EvalPipelineS2(StandalonePipeline):
             for pack in uploads:
                 self.handler.load(pack, self.clean_clients, self.noisy_clients)
 
-            loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            #bacc = balanced_accuracy_score(self.handler.model, self.test_loader)  # Calculate balanced accuracy
+            loss, acc, bacc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
             logging.info("Loss {:.4f}, Test Accuracy {:.4f}".format(loss, acc))
             
             if acc > self.best_performance:
                 self.best_performance = acc
                 logging.info(f'Best accuracy: {self.best_performance:.4f}')
 
+
+            # Update best balanced accuracy
+            if bacc > self.best_balanced_accuracy:
+                self.best_balanced_accuracy = bacc
+                logging.info(f'Best balanced accuracy: {self.best_balanced_accuracy:.4f}')
                 # Save model state_dict
-                model_path = f'model/stage1_model_{t}.pth'
+                model_path = f'model/stage2_model_{t}.pth'
                 self.best_round_number = t
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
 
-            # Update best balanced accuracy
-            #if bacc > self.best_balanced_accuracy:
-            #    self.best_balanced_accuracy = bacc
 
             self.loss.append(loss)
             self.acc.append(acc)
-            #self.bacc.append(bacc)
+            self.bacc.append(bacc)
             t += 1
         
         logging.info('Final best accuracy: {:.4f}, Best model number : {} '.format(self.best_performance, self.best_round_number))
