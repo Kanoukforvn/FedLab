@@ -14,14 +14,26 @@ from tensorboardX import SummaryWriter
 
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix
 
-# Configure logging to both stdout and a log file
+sys.path.append("../")
+
+cwd = os.getcwd()
+project_root = os.path.abspath(os.path.join(cwd, "../.."))
+sys.path.append(project_root)
+
+# configuration
 from munch import Munch
+from fedlab.models.build_model import build_model
+from fedlab.utils.dataset.functional import partition_report
+from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA_KD, DaAggregator
+from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files, get_output, get_current_consistency_weight
+from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler, FedAvgServerHandler
+from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 args = Munch
 
 args.total_client = 20
 args.alpha = 2
-args.seed = 0
+args.seed = 1
 args.preprocess = True
 args.dataname = "cifar10"
 args.model = "Resnet18"
@@ -30,39 +42,18 @@ args.num_users = args.total_client
 #args.device = "cuda" if torch.cuda.is_available() else "cpu"
 args.device = "cuda"
 args.cuda = True
-args.level_n_lowerb = 0.5
-args.level_n_upperb = 0.7
-args.level_n_system = 0.4
-args.n_type = "random"
-args.epochs = 5
-args.batch_size = 16
-args.lr = 0.0003
-args.warm_up_round = 15
-args.sample_ratio = 1
-args.begin = 10
-args.end = 49
-args.a = 0.8 
-args.exp = "Fed"       
-args.com_round = 100
 
 if args.dataname == "cifar10":
     args.n_classes = 10
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler(f'log_dataset_{args.dataname}_noise_lvl_{args.level_n_system}_num_client_{args.total_client}')])
+#logging.info(str(args))
 
-sys.path.append("../")
+logging.basicConfig(level=logging.INFO,
+                        format='[%(asctime)s.%(msecs)03d] %(message)s', 
+                        datefmt='%H:%M:%S',
+                        stream=sys.stdout)
 
-cwd = os.getcwd()
-project_root = os.path.abspath(os.path.join(cwd, "../.."))
-sys.path.append(project_root)
-
-# configuration
-from fedlab.models.build_model import build_model
-from fedlab.utils.dataset.functional import partition_report
-from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA_KD, DaAggregator
-from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files, get_output, get_current_consistency_weight
-from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler, FedAvgServerHandler
-from fedlab.contrib.algorithm.basic_server import SyncServerHandler
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout)) #only uselful for kaggle
 
 
 # We provide a example usage of patitioned CIFAR10 dataset
@@ -95,8 +86,8 @@ dataset_train = fed_cifar10.get_dataset(0, type="train")
 dataset_test = fed_cifar10.get_dataset(0, type="test")
 
 # Get the dataloaders
-dataloader_train = fed_cifar10.get_dataloader(0, args.batch_size, type="train")
-dataloader_test = fed_cifar10.get_dataloader(0, args.batch_size, type="test")
+dataloader_train = fed_cifar10.get_dataloader(0, batch_size=16, type="train")
+dataloader_test = fed_cifar10.get_dataloader(0, batch_size=16, type="test")
 
 logging.info(
     f"train: {Counter(fed_cifar10.targets_train)}, total: {len(fed_cifar10.targets_train)}")
@@ -148,6 +139,10 @@ fig.savefig(f'./imgs/feddata-scatterplot-vis.png')
 #            Noise Generation              #
 ############################################
 
+args.level_n_lowerb = 0.5
+args.level_n_upperb = 0.7
+args.level_n_system = 0.6
+args.n_type = "random"
 
 y_train = np.array(fed_cifar10.targets_train)
 y_train_noisy, gamma_s, real_noise_level = add_noise(args, y_train, fed_cifar10.data_indices_train)
@@ -176,6 +171,9 @@ plt.show()
 
 
 # local train configuration
+args.epochs = 5
+args.batch_size = 16
+args.lr = 0.0003
 
 model = build_model(args)
         
@@ -191,21 +189,27 @@ logging.info("\n ---------------------begin training---------------------")
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
 
 # Create client trainer and server handler
+args.com_round = 15
+args.sample_ratio = 1
 
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
-from fedlab.utils.functional import evaluate
+from fedlab.utils.functional import evaluate, globaltest
 from fedlab.core.standalone import StandalonePipeline
 
-handler = FedAvgServerHandler(model=model, global_round=args.warm_up_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
+handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
 
+
+from fedlab.utils.functional import evaluate, globaltest
 from fedlab.core.standalone import StandalonePipeline
 
 from torch import nn
 from torch.utils.data import DataLoader
 import torchvision
+
+from sklearn.metrics import accuracy_score, balanced_accuracy_score, confusion_matrix
 
 ############################################
 #      Stage 1-1 - Evaluation Pipeline       #
@@ -213,7 +217,7 @@ import torchvision
 
 label_counts_per_client = trainer.get_num_of_each_class_global(fed_cifar10)
 for client_index, label_counts in enumerate(label_counts_per_client):
-    logging.info(f"Client {client_index} label counts: {label_counts} total")
+    logging.info(f"Client {client_index} label counts: {label_counts}")
 
 class EvalPipelineS1(StandalonePipeline):
     def __init__(self, handler, trainer, test_loader):
@@ -357,6 +361,13 @@ logging.info(f"selected clean clients: {clean_clients}")
 #    Stage 2 - Noise-Robust Training       #
 ############################################
 
+args.begin = 10
+args.end = 49
+args.a = 0.8 
+args.exp = "Fed"       
+
+args.com_round = 100
+args.sample_ratio = 1
 
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
@@ -452,5 +463,3 @@ class EvalPipelineS2(StandalonePipeline):
 eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, noisy_clients=noisy_clients, clean_clients=clean_clients, test_loader=test_loader, args=args)
 eval_pipeline_s2.main()
 eval_pipeline_s2.show()
-
-
