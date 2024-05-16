@@ -59,7 +59,7 @@ from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRo
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 from torchvision import transforms
-from datasets.fednoro_datasets.dataset import get_dataset
+from fedlab.utils.dataset_utils import get_dataset
 
 ############################################
 #           Set up the dataset             #
