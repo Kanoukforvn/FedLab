@@ -13,3 +13,4 @@ from .powerofchoice import PowerofchoiceSerialClientTrainer, PowerofchoicePipeli
 from .qfedavg import qFedAvgClientTrainer, qFedAvgServerHandler
 from .scaffold import ScaffoldSerialClientTrainer, ScaffoldServerHandler
 from .fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler
+from .fedmdcs import FedMDCSServerHandler

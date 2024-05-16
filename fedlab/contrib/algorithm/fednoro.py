@@ -45,7 +45,7 @@ class FedNoRoServerHandler(SyncServerHandler):
     def global_update_daagg(self, buffer, clean_clients, noisy_clients):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]        
-        serialized_parameters = DaAggregator.DaAgg(parameters_list, weights, clean_clients, noisy_clients)
+        serialized_parameters = DaAggregator.DaFedMDCSAgg(parameters_list, self.model_parameters, clean_clients, noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
     def load(self, payload: List[torch.Tensor], clean_clients, noisy_clients) -> bool:

@@ -32,7 +32,7 @@ args.device = "cuda"
 args.cuda = True
 args.level_n_lowerb = 0.5
 args.level_n_upperb = 0.7
-args.level_n_system = 0.4
+args.level_n_system = 0.6
 args.n_type = "random"
 args.epochs = 5
 args.batch_size = 16
@@ -70,6 +70,7 @@ from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 from torchvision import transforms
 from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
+
 
 ############################################
 #           Set up the dataset             #
@@ -408,7 +409,7 @@ class EvalPipelineS2(StandalonePipeline):
                 self.handler.load(pack, self.clean_clients, self.noisy_clients)
 
             loss, acc, bacc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            logging.info("Loss {:.4f}, Test Accuracy {:.4f}".format(loss, acc))
+            logging.info("Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
             
             if acc > self.best_performance:
                 self.best_performance = acc

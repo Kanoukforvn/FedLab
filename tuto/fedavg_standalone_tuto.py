@@ -41,17 +41,18 @@ fed_mnist = PartitionedMNIST(root="../datasets/mnist/",
                              [transforms.ToPILImage(), transforms.ToTensor()]))
 
 dataset = fed_mnist.get_dataset(0) # get the 0-th client's dataset
-dataloader = fed_mnist.get_dataloader(0, batch_size=128) # get the 0-th client's dataset loader with batch size 128
+dataloader = fed_mnist.get_dataloader(0, batch_size=16) # get the 0-th client's dataset loader with batch size 128
 
 # client
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
+from fedlab.contrib.algorithm.fedmdcs import FedMDCSSerialClientTrainer
 
 # local train configuration
 args.epochs = 5
-args.batch_size = 128
+args.batch_size = 16
 args.lr = 0.1
 
-trainer = SGDSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
+trainer = FedMDCSSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
 #trainer = SGDClientTrainer(model, cuda=True) # single trainer
 
 trainer.setup_dataset(fed_mnist)
@@ -59,12 +60,13 @@ trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
 # server
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
+from fedlab.contrib.algorithm.fedmdcs import FedMDCSServerHandler
 
 # global configuration
-args.com_round = 10
+args.com_round = 20
 args.sample_ratio = 0.15
 
-handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)
+handler = FedMDCSServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -82,6 +84,7 @@ class EvalPipeline(StandalonePipeline):
         self.test_loader = test_loader 
         self.loss = []
         self.acc = []
+        self.bacc = []
         
     def main(self):
         t=0
@@ -98,11 +101,12 @@ class EvalPipeline(StandalonePipeline):
             for pack in uploads:
                 self.handler.load(pack)
 
-            loss, acc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            print("Round {}, Loss {:.4f}, Test Accuracy {:.4f}".format(t, loss, acc))
+            loss, acc, bacc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
+            print("Round {}, Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(t, loss, acc, bacc))
             t+=1
             self.loss.append(loss)
             self.acc.append(acc)
+            self.bacc.append(bacc)
     
     def show(self):
         plt.figure(figsize=(8,4.5))
@@ -116,6 +120,8 @@ class EvalPipeline(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuarcy")
         
+        plt.savefig(f"./imgs/mnist_dir_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
+   
         
 test_data = torchvision.datasets.MNIST(root="../datasets/mnist/",
                                        train=False,
@@ -124,5 +130,4 @@ test_loader = DataLoader(test_data, batch_size=1024)
 
 standalone_eval = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
 standalone_eval.main()
-
 standalone_eval.show()

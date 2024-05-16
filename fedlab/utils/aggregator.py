@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import torch
+from torch.multiprocessing import Pool
+import torch.multiprocessing as mp
+from multiprocessing import get_context
+import numpy as np
+
 class Aggregators(object):
     """Define the algorithm of parameters aggregation"""
 
@@ -62,14 +68,59 @@ class Aggregators(object):
         serialized_parameters = torch.mul(1 - alpha, server_param) + \
                                 torch.mul(alpha, new_param)
         return serialized_parameters
+    
+    @staticmethod
+    def calculate_divergence(client_model, global_model):
+        # Assuming client_model and global_model are lists of tensors
+        divergence = 0.0
+        num_weights = len(global_model)
+        total_divergence = 0.0
 
+        for w_client, w_global in zip(client_model, global_model):
+            w_client_flat = w_client.flatten()
+            w_global_flat = w_global.flatten()
+            total_divergence += torch.sum(torch.abs((w_client_flat - w_global_flat) / w_global_flat))
 
-import torch
-import numpy as np
+        divergence = total_divergence.item() / num_weights
+        return divergence
 
+    @staticmethod
+    def FedMDCSAgg(client_models, global_model, top_n_clients):
+        """
+        Ranks clients based on the normalized model divergence and aggregates using the top N clients,
+        then uses FedAvg to perform the final aggregation.
+        
+        Args:
+            client_models (list): List of client model weights.
+            global_model (list): Weights of the global model.
+            top_n_clients (int): Number of top clients to use for aggregation.
+
+        Returns:
+            aggregated_model: Aggregated model parameters.
+        """
+        device = global_model[0].device  # Ensure the global model is on the appropriate device
+
+        # Calculate divergences on the same device as the global model
+        divergences = [Aggregators.calculate_divergence(
+            [tensor.to(device) for tensor in client_model], global_model) for client_model in client_models]
+
+        # Rank clients based on normalized divergence in descending order
+        ranked_clients = sorted(enumerate(divergences), key=lambda x: x[1], reverse=True)
+
+        # Select the top N clients
+        selected_clients_indices = [client[0] for client in ranked_clients[:top_n_clients]]
+        
+        # Aggregate the selected clients' models using FedAvg
+        selected_models = [client_models[idx] for idx in selected_clients_indices]
+        selected_weights = [1.0 / top_n_clients] * top_n_clients  # Uniform weights for simplicity
+
+        aggregated_model = Aggregators.fedavg_aggregate(selected_models, selected_weights)
+
+        return aggregated_model
+        
 class DaAggregator:
     @staticmethod
-    def DaAgg(parameters_list, weights, clean_clients, noisy_clients):
+    def DaAgg(parameters_list, clean_clients, noisy_clients):
         # Define the client-wise distance metric
         def compute_distance(wi, wj):
             return torch.norm(wi - wj, p=2)
@@ -99,3 +150,38 @@ class DaAggregator:
         global_model = sum(parameters_list[i].cpu() * weight for i, weight in enumerate(normalized_weights))
 
         return global_model
+    
+    @staticmethod
+    def DaFedMDCSAgg(client_models, global_model, top_n_clients, clean_clients, noisy_clients):
+        """
+        Ranks clients based on the normalized model divergence and aggregates using the top N clients,
+        then uses FedAvg to perform the final aggregation.
+        
+        Args:
+            client_models (list): List of client model weights.
+            global_model (list): Weights of the global model.
+            top_n_clients (int): Number of top clients to use for aggregation.
+
+        Returns:
+            aggregated_model: Aggregated model parameters.
+        """
+        device = global_model[0].device  # Ensure the global model is on the appropriate device
+
+        # Calculate divergences on the same device as the global model
+        divergences = [Aggregators.calculate_divergence(
+            [tensor.to(device) for tensor in client_model], global_model) for client_model in client_models]
+
+        # Rank clients based on normalized divergence in descending order
+        ranked_clients = sorted(enumerate(divergences), key=lambda x: x[1], reverse=True)
+
+        # Select the top N clients
+        selected_clients_indices = [client[0] for client in ranked_clients[:top_n_clients]]
+        
+        # Aggregate the selected clients' models using FedAvg
+        selected_models = [client_models[idx] for idx in selected_clients_indices]
+        selected_weights = [1.0 / top_n_clients] * top_n_clients  # Uniform weights for simplicity
+
+        aggregated_model = DaAggregator.DaAgg(selected_models, clean_clients, noisy_clients)
+
+        return aggregated_model
+        
