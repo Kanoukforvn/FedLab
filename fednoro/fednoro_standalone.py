@@ -71,19 +71,6 @@ from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 from torchvision import transforms
 from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
 
-from datasets.fednoro_datasets.dataset import get_dataset
-
-############################################
-#           Set up the dataset             #
-############################################
-
-dataset_train, dataset_test, dict_users = get_dataset(args)
-logging.info(
-    f"train: {Counter(dataset_train.targets)}, total: {len(dataset_train.targets)}")
-logging.info(
-    f"test: {Counter(dataset_test.targets)}, total: {len(dataset_test.targets)}")
-
-
 
 ############################################
 #           Set up the dataset             #
