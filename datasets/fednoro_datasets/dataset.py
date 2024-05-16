@@ -7,7 +7,7 @@ from .all_datasets import isic2019, ICH
 from fedlab.utils.sampling import iid_sampling, non_iid_dirichlet_sampling
 
 def get_dataset(args):
-    if args.dataset == "isic2019":
+    if args.dataname == "isic2019":
         root = "your path"
         args.n_classes = 8
 
