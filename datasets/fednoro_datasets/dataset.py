@@ -8,7 +8,7 @@ from fedlab.utils.sampling import iid_sampling, non_iid_dirichlet_sampling
 
 def get_dataset(args):
     if args.dataname == "isic2019":
-        root = "your path"
+        root = "/kaggle/input/isic-2019/ISIC_2019_Training_Input/ISIC_2019_Training_Input"
         args.n_classes = 8
 
         normalize = transforms.Normalize([0.485, 0.456, 0.406],
