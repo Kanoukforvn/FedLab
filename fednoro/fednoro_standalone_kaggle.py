@@ -1,6 +1,5 @@
 import sys
 import os
-import copy
 import logging
 import torch
 import pandas as pd
@@ -10,9 +9,40 @@ from collections import Counter
 import numpy as np
 import torch.nn as nn
 
-from tensorboardX import SummaryWriter
+# Configure logging to both stdout and a log file
+from munch import Munch
 
-from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix
+args = Munch
+
+args.total_client = 20
+args.alpha = 2
+args.seed = 0
+args.preprocess = True
+args.dataname = "isic2019"
+args.model = "Resnet18"
+args.pretrained = 1
+args.num_users = args.total_client
+args.device = "cuda"
+args.cuda = True
+args.level_n_lowerb = 0.5
+args.level_n_upperb = 0.7
+args.level_n_system = 0.6
+args.n_type = "random"
+args.epochs = 5
+args.batch_size = 16
+args.lr = 0.0003
+args.warm_up_round = 15
+args.sample_ratio = 1
+args.begin = 10
+args.end = 49
+args.a = 0.8 
+args.exp = "Fed"       
+args.com_round = 100
+
+if args.dataname == "cifar10":
+    args.n_classes = 10
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler(f'log_dataset_{args.dataname}_noise_lvl_{args.level_n_system}_num_client_{args.total_client}')])
 
 sys.path.append("../")
 
@@ -21,7 +51,6 @@ project_root = os.path.abspath(os.path.join(cwd, "../.."))
 sys.path.append(project_root)
 
 # configuration
-from munch import Munch
 from fedlab.models.build_model import build_model
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA_KD, DaAggregator
@@ -29,72 +58,21 @@ from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files, ge
 from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler, FedAvgServerHandler
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
-args = Munch
-
-args.total_client = 20
-args.alpha = 2
-args.seed = 1
-args.preprocess = True
-args.dataname = "cifar10"
-args.model = "Resnet18"
-args.pretrained = 1
-args.num_users = args.total_client
-#args.device = "cuda" if torch.cuda.is_available() else "cpu"
-args.device = "cuda"
-args.cuda = True
-
-if args.dataname == "cifar10":
-    args.n_classes = 10
-
-#logging.info(str(args))
-
-logging.basicConfig(level=logging.INFO,
-                        format='[%(asctime)s.%(msecs)03d] %(message)s', 
-                        datefmt='%H:%M:%S',
-                        stream=sys.stdout)
-
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout)) #only uselful for kaggle
-
-
-# We provide a example usage of patitioned CIFAR10 dataset
-# Download raw CIFAR10 dataset and partition them according to given configuration
-
 from torchvision import transforms
-from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
+from datasets.fednoro_datasets.dataset import get_dataset
 
 ############################################
 #           Set up the dataset             #
 ############################################
 
+from datasets.fednoro_datasets.dataset import get_dataset
 
-fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
-                                  path="../datasets/cifar10/fedcifar10/",
-                                  dataname=args.dataname,
-                                  num_clients=args.total_client,
-                                  num_classes=args.n_classes,
-                                  balance=True,
-                                  partition="dirichlet",
-                                  seed=args.seed,
-                                  dir_alpha=args.alpha,
-                                  preprocess=args.preprocess,
-                                  download=True,
-                                  verbose=True,
-                                  transform=transforms.ToTensor())
-
-# Get the dataset for the 0-th client
-dataset_train = fed_cifar10.get_dataset(0, type="train")
-dataset_test = fed_cifar10.get_dataset(0, type="test")
-
-# Get the dataloaders
-dataloader_train = fed_cifar10.get_dataloader(0, batch_size=16, type="train")
-dataloader_test = fed_cifar10.get_dataloader(0, batch_size=16, type="test")
-
+dataset_train, dataset_test, dict_users = get_dataset(args)
 logging.info(
-    f"train: {Counter(fed_cifar10.targets_train)}, total: {len(fed_cifar10.targets_train)}")
+    f"train: {Counter(dataset_train.targets)}, total: {len(dataset_train.targets)}")
 logging.info(
-    f"test: {Counter(fed_cifar10.targets_test)}, total: {len(fed_cifar10.targets_test)}")
-
-
+    f"test: {Counter(dataset_test.targets)}, total: {len(dataset_test.targets)}")
+"""
 ############################################
 #                  Dataset                 #
 ############################################
@@ -463,3 +441,4 @@ class EvalPipelineS2(StandalonePipeline):
 eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, noisy_clients=noisy_clients, clean_clients=clean_clients, test_loader=test_loader, args=args)
 eval_pipeline_s2.main()
 eval_pipeline_s2.show()
+"""
