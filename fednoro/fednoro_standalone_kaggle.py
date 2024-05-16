@@ -65,13 +65,12 @@ from datasets.fednoro_datasets.dataset import get_dataset
 #           Set up the dataset             #
 ############################################
 
-from datasets.fednoro_datasets.dataset import get_dataset
-
 dataset_train, dataset_test, dict_users = get_dataset(args)
 logging.info(
     f"train: {Counter(dataset_train.targets)}, total: {len(dataset_train.targets)}")
 logging.info(
     f"test: {Counter(dataset_test.targets)}, total: {len(dataset_test.targets)}")
+
 """
 ############################################
 #                  Dataset                 #

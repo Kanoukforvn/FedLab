@@ -76,7 +76,6 @@ from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
 #           Set up the dataset             #
 ############################################
 
-
 fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   path="../datasets/cifar10/fedcifar10/",
                                   dataname=args.dataname,
