@@ -30,7 +30,7 @@ def get_dataset(args):
         test_dataset = isic2019(root, "test", val_transform)
 
 
-    elif args.dataset == "ICH":
+    elif args.dataname == "ICH":
         root = "your path"
         args.n_classes = 5
 
