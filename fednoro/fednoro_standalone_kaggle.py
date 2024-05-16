@@ -46,9 +46,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 sys.path.append("../")
 
-cwd = os.getcwd()
-project_root = os.path.abspath(os.path.join(cwd, "../.."))
-sys.path.append(project_root)
+#cwd = os.getcwd()
+#project_root = os.path.abspath(os.path.join(cwd, "../.."))
+#sys.path.append(project_root)
 
 # configuration
 from fedlab.models.build_model import build_model
