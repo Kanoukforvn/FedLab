@@ -26,7 +26,7 @@ from ...utils.aggregator import Aggregators
 
 class FedMDCSServerHandler(SyncServerHandler):
     """FedAvg server handler."""
-    def __init__(self, model, global_round, num_clients=0, sample_ratio=1, cuda=False, device=None, sampler=None, logger=None, top_n_clients=5):
+    def __init__(self, model, global_round, num_clients=0, sample_ratio=1, cuda=False, device=None, sampler=None, logger=None, top_n_clients=10):
         super(FedMDCSServerHandler, self).__init__(model, global_round, num_clients, sample_ratio, cuda, device, sampler, logger)
         self.top_n_clients = top_n_clients
 

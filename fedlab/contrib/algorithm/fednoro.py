@@ -45,7 +45,7 @@ class FedNoRoServerHandler(SyncServerHandler):
     def global_update_daagg(self, buffer, clean_clients, noisy_clients):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]        
-        serialized_parameters = DaAggregator.DaFedMDCSAgg(parameters_list, self.model_parameters, clean_clients, noisy_clients)
+        serialized_parameters = DaAggregator.DaAgg(parameters_list, self.model_parameters, clean_clients, noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
     def load(self, payload: List[torch.Tensor], clean_clients, noisy_clients) -> bool:
@@ -87,7 +87,7 @@ class FedNoRoServerHandler(SyncServerHandler):
 class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
 
     def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
-                 warmup_rounds=5, lr_warmup=0.0003, epochs_warmup=5, lr=0.01, epochs=5, num_class = 10) -> None:
+                 warmup_rounds=5, lr_warmup=0.0003, epochs_warmup=5, lr=0.0003, epochs=5, num_class = 10) -> None:
         super().__init__(model, num_clients, cuda, device, personal)
         self._LOGGER = logger if logger is not None else Logger()
         self.warmup_rounds = warmup_rounds #FIXME replace  com round with warm up round

@@ -10,11 +10,8 @@ from collections import Counter
 import numpy as np
 import torch.nn as nn
 
-from tensorboardX import SummaryWriter
-
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix
 
-# Configure logging to both stdout and a log file
 from munch import Munch
 
 args = Munch
@@ -32,7 +29,7 @@ args.device = "cuda"
 args.cuda = True
 args.level_n_lowerb = 0.5
 args.level_n_upperb = 0.7
-args.level_n_system = 0.6
+args.level_n_system = 0.4
 args.n_type = "random"
 args.epochs = 5
 args.batch_size = 16
@@ -43,7 +40,7 @@ args.begin = 10
 args.end = 49
 args.a = 0.8 
 args.exp = "Fed"       
-args.com_round = 100
+args.com_round = 100-args.warm_up_round
 
 if args.dataname == "cifar10":
     args.n_classes = 10
@@ -60,7 +57,7 @@ sys.path.append(project_root)
 from fedlab.models.build_model import build_model
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA_KD, DaAggregator
-from fedlab.utils.fednoro_utils import add_noise, set_seed, set_output_files, get_output, get_current_consistency_weight
+from fedlab.utils.fednoro_utils import add_noise, set_seed, get_output, get_current_consistency_weight
 from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler, FedAvgServerHandler
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
@@ -358,7 +355,7 @@ logging.info(f"selected clean clients: {clean_clients}")
 ############################################
 
 
-trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
+trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda, lr=args.lr)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
@@ -431,7 +428,7 @@ class EvalPipelineS2(StandalonePipeline):
             self.bacc.append(bacc)
             t += 1
         
-        logging.info('Final best accuracy: {:.4f}, Best model number : {} '.format(self.best_performance, self.best_round_number))
+        logging.info('Final best accuracy: {:.4f}, Best balanced accuracy {:.4f}, Best model number : {} '.format(self.best_performance, self.best_balanced_accuracy, self.best_round_number))
 
 
     def show(self):
@@ -453,4 +450,4 @@ eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, noisy_client
 eval_pipeline_s2.main()
 eval_pipeline_s2.show()
 
-
+torch.cuda.empty_cache()
