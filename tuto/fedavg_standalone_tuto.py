@@ -54,12 +54,12 @@ dataloader = fed_mnist.get_dataloader(0, batch_size=16) # get the 0-th client's 
 # generate partition report
 csv_file = f"./partition-reports/{args.dataname}_hetero_dir_{args.alpha}_{args.total_client}clients.csv"
 partition_report(fed_mnist.targets, fed_mnist.client_dict, 
-                 class_num=args.n_classes, 
+                 class_num=args.num_classes, 
                  verbose=False, file=csv_file)
 
 hetero_dir_part_df = pd.read_csv(csv_file,header=0)
 hetero_dir_part_df = hetero_dir_part_df.set_index('cid')
-col_names = [f"class-{i}" for i in range(args.n_classes)]
+col_names = [f"class-{i}" for i in range(args.num_classes)]
 for col in col_names:
     hetero_dir_part_df[col] = (hetero_dir_part_df[col] * hetero_dir_part_df['TotalAmount']).astype(int)
 
