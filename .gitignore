@@ -198,8 +198,8 @@ unit_test*
 /datasets/*/meta
 /datasets/*/data/*
 /datasets/*/meta/*
-/datasets/*/train/*
-/datasets/*/test/*
+/datasets/*/train/*.pkl
+/datasets/*/test/*.pkl
 
 
 #New rules
