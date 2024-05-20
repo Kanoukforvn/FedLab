@@ -24,8 +24,9 @@ sys.path.append("../")
 
 from fedlab.models.mlp import MLP
 from fedlab.utils.dataset.functional import partition_report
+from fedlab.models.build_model import build_model
 
-model = MLP(784, 10)
+model = build_model()
 
 # We provide a example usage of patitioned CIFAR10 dataset
 # Download raw CIFAR10 dataset and partition them according to given configuration
@@ -37,7 +38,7 @@ import pandas as pd
 trainset = torchvision.datasets.CIFAR10(root="../../../../data/CIFAR10/", train=True, download=True)
 
 fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
-                                  path="../datasets/cifar10/fedcifar10/",
+                                  path="../datasets/cifar10/fedcifar10_2/",
                                   dataname=args.dataname,
                                   num_clients=args.total_client,
                                   num_classes=args.num_classes,
