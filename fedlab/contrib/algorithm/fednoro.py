@@ -87,11 +87,9 @@ class FedNoRoServerHandler(SyncServerHandler):
 class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
 
     def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
-                 warmup_rounds=5, lr_warmup=0.0003, epochs_warmup=5, lr=0.0003, epochs=5, num_class = 10) -> None:
+                 warmup_rounds=5, epochs_warmup=5, lr=0.1, epochs=5, num_class = 10) -> None:
         super().__init__(model, num_clients, cuda, device, personal)
-        self._LOGGER = logger if logger is not None else Logger()
         self.warmup_rounds = warmup_rounds #FIXME replace  com round with warm up round
-        self.lr_warmup = lr_warmup
         self.epochs_warmup = epochs_warmup
         self.lr = lr
         self.epochs = epochs
@@ -107,6 +105,9 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
         self.batch_size = batch_size
         self.lr = lr
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr)
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(
+            self.optimizer, lr_lambda=lambda epoch: 0.0003 / self.lr ** (epoch / epochs)
+        )
         self.criterion = torch.nn.CrossEntropyLoss()
         cls_num_list = self.get_num_of_each_class_global(self.dataset)
         for client_index, label_counts in enumerate(cls_num_list):
@@ -158,7 +159,7 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             
             elif id in noisy_clients:
                 progress_bar.set_description(f"Training on noisy client {id}", refresh=True)
-                w_local, loss_local = self.train_fednoro(model_parameters.cuda(self.device), data_loader, weight_kd=weight_kd)
+                w_local, loss_local = self.train_fednoro(model_parameters.cuda(self.device), data_loader, weight_kd)
                 pack = [w_local, loss_local]
                 self.cache.append(pack)
             
@@ -183,8 +184,13 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
 
                 optimizer.step()
                 epoch_loss.append(loss.item())
-
+            
+            # Log the learning rate
+            current_lr = optimizer.param_groups[0]['lr']
+            self._LOGGER.info(f'Epoch {epoch + 1}, Learning rate: {current_lr}')
+            
             avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
+            self.scheduler.step()  # Step the scheduler
 
         
         return [SerializationTool.serialize_model(self._model), avg_epoch_loss]
@@ -225,6 +231,11 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
                 batch_loss.append(loss.item())
 
             epoch_loss.append(np.array(batch_loss).mean())
+            
+            # Log the learning rate
+            current_lr = self.optimizer.param_groups[0]['lr']
+            logging.info(f'Epoch {epoch + 1}, Learning rate: {current_lr}')
+            
+            self.scheduler.step()  # Step the scheduler
 
         return SerializationTool.serialize_model(self._model), np.array(epoch_loss).mean()
-
