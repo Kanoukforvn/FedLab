@@ -1,22 +1,8 @@
-import sys
-sys.path.append("../")
-
-import logging
-logging.basicConfig(level=logging.INFO,
-                        format='[%(asctime)s.%(msecs)03d] %(message)s', 
-                        datefmt='%H:%M:%S',
-                        stream=sys.stdout)
-
-import torchvision
-
 # configuration
 from munch import Munch
 import matplotlib.pyplot as plt
-from fedlab.models.mlp import MLP
-from fedlab.utils.dataset.functional import partition_report
+import torchvision
 
-
-model = MLP(784, 10)
 args = Munch
 
 args.total_client = 20
@@ -26,6 +12,18 @@ args.preprocess = True
 args.cuda = True
 args.dataname = "cifar10"
 args.num_classes = 10
+
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler(f'log_dataset_{args.dataname}_alpha_{args.alpha}_num_client_{args.total_client}')])
+
+import sys
+sys.path.append("../")
+
+
+from fedlab.models.mlp import MLP
+from fedlab.utils.dataset.functional import partition_report
+
+model = MLP(784, 10)
 
 # We provide a example usage of patitioned CIFAR10 dataset
 # Download raw CIFAR10 dataset and partition them according to given configuration
@@ -151,6 +149,8 @@ class EvalPipeline(StandalonePipeline):
             self.acc.append(acc)
             self.bacc.append(bacc)
     
+        logging.info(f'Final Best Balanced Accuracy: {self.best_balanced_accuracy:.4f}')
+
     def show(self):
         plt.figure(figsize=(8,4.5))
         ax = plt.subplot(1,2,1)
