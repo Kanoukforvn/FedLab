@@ -13,12 +13,14 @@ args.cuda = True
 args.dataname = "cifar10"
 args.num_classes = 10
 
+
 import logging
+import sys
+
 logging.basicConfig(
     stream=sys.stdout,
     level=logging.INFO)
 
-import sys
 sys.path.append("../")
 
 
@@ -26,7 +28,7 @@ from fedlab.models.mlp import MLP
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.models.build_model import build_model
 
-model = build_model()
+model = build_model(args)
 
 # We provide a example usage of patitioned CIFAR10 dataset
 # Download raw CIFAR10 dataset and partition them according to given configuration
