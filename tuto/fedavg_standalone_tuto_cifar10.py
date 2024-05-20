@@ -14,7 +14,7 @@ args.dataname = "cifar10"
 args.num_classes = 10
 
 import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler(f'log_dataset_{args.dataname}_alpha_{args.alpha}_num_client_{args.total_client}')])
+#logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler(f'log_dataset_{args.dataname}_alpha_{args.alpha}_num_client_{args.total_client}')])
 
 import sys
 sys.path.append("../")
