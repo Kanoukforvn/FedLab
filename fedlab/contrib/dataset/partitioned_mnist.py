@@ -93,12 +93,16 @@ class PartitionedMNIST(FedDataset):
                                                 train=True,
                                                 download=download)
 
+        self.targets = trainset.targets  # Store targets as an instance variable
+        
         partitioner = MNISTPartitioner(trainset.targets,
                                         self.num_clients,
                                         partition=partition,
                                         dir_alpha=dir_alpha,
                                         verbose=verbose,
                                         seed=seed)
+
+        self.client_dict = partitioner.client_dict  # Store client_dict as an instance variable
 
         # partition
         subsets = {
