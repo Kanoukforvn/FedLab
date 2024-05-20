@@ -9,7 +9,10 @@ logging.basicConfig(level=logging.INFO,
 
 # configuration
 from munch import Munch
+import matplotlib.pyplot as plt
 from fedlab.models.mlp import MLP
+from fedlab.utils.dataset.functional import partition_report
+
 
 model = MLP(784, 10)
 args = Munch
@@ -27,6 +30,7 @@ args.num_classes = 10
 
 from torchvision import transforms
 from fedlab.contrib.dataset.partitioned_mnist import PartitionedMNIST
+import pandas as pd
 
 fed_mnist = PartitionedMNIST(root="../datasets/mnist/",
                          path="../datasets/mnist/fedmnist/",
@@ -40,8 +44,30 @@ fed_mnist = PartitionedMNIST(root="../datasets/mnist/",
                          transform=transforms.Compose(
                              [transforms.ToPILImage(), transforms.ToTensor()]))
 
-dataset = fed_mnist.get_dataset(0) # get the 0-th client's dataset
-dataloader = fed_mnist.get_dataloader(0, batch_size=16) # get the 0-th client's dataset loader with batch size 128
+# Get the dataset for the 0-th client
+dataset_train = fed_mnist.get_dataset(0, type="train")
+dataset_test = fed_mnist.get_dataset(0, type="test")
+
+# generate partition report
+csv_file = f"./partition-reports/{args.dataname}_hetero_dir_{args.alpha}_{args.total_client}clients.csv"
+partition_report(fed_mnist.targets_train, fed_mnist.data_indices_train, 
+                 class_num=args.num_classes, 
+                 verbose=False, file=csv_file)
+
+hetero_dir_part_df = pd.read_csv(csv_file,header=0)
+hetero_dir_part_df = hetero_dir_part_df.set_index('cid')
+col_names = [f"class-{i}" for i in range(args.num_classes)]
+for col in col_names:
+    hetero_dir_part_df[col] = (hetero_dir_part_df[col] * hetero_dir_part_df['TotalAmount']).astype(int)
+
+#select first 10 clients for bar plot
+hetero_dir_part_df[col_names].iloc[:5].plot.barh(stacked=True)  
+plt.tight_layout()
+plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+plt.xlabel('sample num')
+plt.savefig(f"./imgs/dataset_{args.dataname}_alpha_{args.alpha}_{args.total_client}clients.png", dpi=400, bbox_inches = 'tight')
+plt.show()
+
 
 # client
 from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDClientTrainer
@@ -122,7 +148,7 @@ class EvalPipeline(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuarcy")
         
-        plt.savefig(f"./imgs/mnist_dir_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/{args.dataname}_dir_alpha_{args.alpha}_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
    
         
 test_data = torchvision.datasets.MNIST(root="../datasets/mnist/",
