@@ -19,8 +19,7 @@ from torch.utils.data import DataLoader
 import torchvision
 from torchvision import transforms
 
-
-from .basic_dataset import FedDataset, BaseDataset
+from .basic_dataset import FedDataset, Subset
 from ...utils.dataset.partition import CIFAR10Partitioner, CIFAR100Partitioner, MNISTPartitioner
 
 
@@ -94,68 +93,26 @@ class PartitionedMNIST(FedDataset):
                                                 train=True,
                                                 download=download)
 
-        testset = torchvision.datasets.CIFAR10(
-            root=self.root,
-            train=False,
-            download=self.download,
-        )
-
-
-        self.targets_train = trainset.targets
-        self.targets_test = testset.targets
-
-
-        partitioner_train = MNISTPartitioner(trainset.targets,
+        partitioner = MNISTPartitioner(trainset.targets,
                                         self.num_clients,
                                         partition=partition,
                                         dir_alpha=dir_alpha,
                                         verbose=verbose,
                                         seed=seed)
 
-        partitioner_test = MNISTPartitioner(testset.targets,
-                                        self.num_clients,
-                                        partition=partition,
-                                        dir_alpha=dir_alpha,
-                                        verbose=verbose,
-                                        seed=seed)
-
-        self.data_indices_train = partitioner_train.client_dict
-        self.data_indices_test = partitioner_test.client_dict
-
-        samples_train, labels_train = [], []
-        samples_test, labels_test = [], []
-
-        for x, y in trainset:
-            samples_train.append(x)
-            labels_train.append(y)
-
-        for x, y in testset:
-            samples_test.append(x)
-            labels_test.append(y)
-
-        for cid_train, indices_train in self.data_indices_train.items():
-            data_train, label_train = [], []
-            for idx in indices_train:
-                x_train, y_train = samples_train[idx], labels_train[idx]
-                data_train.append(x_train)
-                label_train.append(y_train)
-            dataset_train = BaseDataset(data_train, label_train)
+        # partition
+        subsets = {
+            cid: Subset(trainset,
+                        partitioner.client_dict[cid],
+                        transform=transform,
+                        target_transform=target_transform)
+            for cid in range(self.num_clients)
+        }
+        for cid in subsets:
             torch.save(
-                dataset_train,
-                os.path.join(self.path, "train", f"data{cid_train}.pkl"),
-            )
+                subsets[cid],
+                os.path.join(self.path, "train", "data{}.pkl".format(cid)))
 
-        for cid_test, indices_test in self.data_indices_test.items():
-            data_test, label_test = [], []
-            for idx in indices_test:
-                x_test, y_test = samples_test[idx], labels_test[idx]
-                data_test.append(x_test)
-                label_test.append(y_test)
-            dataset_test = BaseDataset(data_test, label_test)
-            torch.save(
-                dataset_test,
-                os.path.join(self.path, "test", f"data{cid_test}.pkl"),
-            )
     def get_dataset(self, cid, type="train"):
         """Load subdataset for client with client ID ``cid`` from local file.
 
