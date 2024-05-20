@@ -24,36 +24,38 @@ args.alpha = 0.1
 args.seed = 0
 args.preprocess = True
 args.cuda = True
-args.dataname = "mnist"
+args.dataname = "cifar10"
 args.num_classes = 10
 
-# We provide a example usage of patitioned MNIST dataset
-# Download raw MNIST dataset and partition them according to given configuration
+# We provide a example usage of patitioned CIFAR10 dataset
+# Download raw CIFAR10 dataset and partition them according to given configuration
 
 from torchvision import transforms
-from fedlab.contrib.dataset.partitioned_mnist import PartitionedMNIST
+from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
 import pandas as pd
 
-trainset = torchvision.datasets.MNIST(root="../../../../data/MNIST/", train=True, download=True)
+trainset = torchvision.datasets.CIFAR10(root="../../../../data/CIFAR10/", train=True, download=True)
 
-fed_mnist = PartitionedMNIST(root="../datasets/mnist/",
-                         path="../datasets/mnist/fedmnist/",
-                         num_clients=args.total_client,
-                         partition="noniid-labeldir",
-                         dir_alpha=args.alpha,
-                         seed=args.seed,
-                         preprocess=args.preprocess,
-                         download=True,
-                         verbose=True,
-                         transform=transforms.Compose(
-                             [transforms.ToPILImage(), transforms.ToTensor()]))
+fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
+                                  path="../datasets/cifar10/fedcifar10/",
+                                  dataname=args.dataname,
+                                  num_clients=args.total_client,
+                                  num_classes=args.num_classes,
+                                  balance=False,
+                                  partition="dirichlet",
+                                  seed=args.seed,
+                                  dir_alpha=args.alpha,
+                                  preprocess=args.preprocess,
+                                  download=True,
+                                  verbose=True,
+                                  transform=transforms.ToTensor())
 
-dataset = fed_mnist.get_dataset(0) # get the 0-th client's dataset
-dataloader = fed_mnist.get_dataloader(0, batch_size=16) # get the 0-th client's dataset loader with batch size 128
+dataset = fed_cifar10.get_dataset(0) # get the 0-th client's dataset
+dataloader = fed_cifar10.get_dataloader(0, batch_size=16) # get the 0-th client's dataset loader with batch size 128
 
 # generate partition report
 csv_file = f"./partition-reports/{args.dataname}_hetero_dir_{args.alpha}_{args.total_client}clients.csv"
-partition_report(fed_mnist.targets, fed_mnist.client_dict, 
+partition_report(fed_cifar10.targets_train, fed_cifar10.data_indices_train, 
                  class_num=args.num_classes, 
                  verbose=False, file=csv_file)
 
@@ -84,7 +86,7 @@ args.lr = 0.0003
 trainer = SGDSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
 #trainer = SGDClientTrainer(model, cuda=True) # single trainer
 
-trainer.setup_dataset(fed_mnist)
+trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
 # server
@@ -164,7 +166,7 @@ class EvalPipeline(StandalonePipeline):
         plt.savefig(f"./imgs/{args.dataname}_dir_alpha_{args.alpha}_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
    
         
-test_data = torchvision.datasets.MNIST(root="../datasets/mnist/",
+test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=False,
                                        transform=transforms.ToTensor())
 test_loader = DataLoader(test_data, batch_size=1024)
