@@ -18,8 +18,6 @@ from fedlab.utils.logger import Logger
 
 
 import torch
-from typing import List
-from copy import deepcopy
 from .basic_server import SyncServerHandler
 from ...utils.serialization import SerializationTool
 from ...utils.aggregator import Aggregators
