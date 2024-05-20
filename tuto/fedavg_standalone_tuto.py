@@ -7,6 +7,8 @@ logging.basicConfig(level=logging.INFO,
                         datefmt='%H:%M:%S',
                         stream=sys.stdout)
 
+import torchvision
+
 # configuration
 from munch import Munch
 import matplotlib.pyplot as plt
@@ -105,7 +107,6 @@ from fedlab.core.standalone import StandalonePipeline
 
 from torch import nn
 from torch.utils.data import DataLoader
-import torchvision
 
 class EvalPipeline(StandalonePipeline):
     def __init__(self, handler, trainer, test_loader):
