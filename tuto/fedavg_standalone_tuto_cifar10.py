@@ -12,7 +12,9 @@ args.preprocess = True
 args.cuda = True
 args.dataname = "cifar10"
 args.num_classes = 10
-
+args.model = "Resnet18"
+args.pretrained = 1
+args.device = "cuda"
 
 import logging
 import sys
