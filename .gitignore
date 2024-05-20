@@ -179,7 +179,7 @@ unit_test.ipynb
 # release cache
 
 /datasets/mnist/*mnist
-/datasets/mnist/fedmnist*
+#/datasets/mnist/fedmnist*
 /datasets/femnist/data
 /datasets/femnist/meta
 /datasets/celeba/data
