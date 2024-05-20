@@ -20,7 +20,7 @@ model = MLP(784, 10)
 args = Munch
 
 args.total_client = 20
-args.alpha = 2
+args.alpha = 0.5
 args.seed = 0
 args.preprocess = True
 args.cuda = True
@@ -115,6 +115,8 @@ class EvalPipeline(StandalonePipeline):
         self.loss = []
         self.acc = []
         self.bacc = []
+        self.best_performance = 0
+        self.best_balanced_accuracy = 0
         
     def main(self):
         t=0
@@ -133,6 +135,14 @@ class EvalPipeline(StandalonePipeline):
 
             loss, acc, bacc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
             print("Round {}, Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(t, loss, acc, bacc))
+            if bacc > self.best_balanced_accuracy:
+                self.best_balanced_accuracy = bacc
+                logging.info(f'Best balanced accuracy: {self.best_balanced_accuracy:.4f}')
+
+            if acc > self.best_performance:
+                self.best_performance = acc
+                logging.info(f'Best accuracy: {self.best_performance:.4f}')
+
             t+=1
             self.loss.append(loss)
             self.acc.append(acc)
@@ -150,7 +160,7 @@ class EvalPipeline(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuarcy")
         
-        plt.savefig(f"./imgs/{args.dataname}_dir_{args.alpha}_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/{args.dataname}_dir_alpha_{args.alpha}_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
    
         
 test_data = torchvision.datasets.MNIST(root="../datasets/mnist/",
