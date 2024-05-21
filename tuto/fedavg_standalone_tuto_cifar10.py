@@ -9,12 +9,12 @@ args.total_client = 20
 args.alpha = 0.1
 args.seed = 0
 args.preprocess = True
-args.cuda = True
+args.cuda = False
 args.dataname = "cifar10"
 args.num_classes = 10
 args.model = "Resnet18"
 args.pretrained = 1
-args.device = "cuda"
+args.device = "cpu"
 
 import logging
 import sys
