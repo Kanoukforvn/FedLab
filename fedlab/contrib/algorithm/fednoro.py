@@ -87,7 +87,7 @@ class FedNoRoServerHandler(SyncServerHandler):
 class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
 
     def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
-                 warmup_rounds=5, epochs_warmup=5, lr=0.01, epochs=5, num_class = 10) -> None:
+                 warmup_rounds=5, epochs_warmup=5, lr=0.1, epochs=5, num_class = 10) -> None:
         super().__init__(model, num_clients, cuda, device, personal)
         self.warmup_rounds = warmup_rounds #FIXME replace  com round with warm up round
         self.epochs_warmup = epochs_warmup
@@ -171,7 +171,7 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
 
         # set the optimizer
         optimizer = torch.optim.Adam(
-             model_parameters, lr=self.lr, betas=(0.9, 0.999), weight_decay=5e-4)
+             self._model.parameters(), lr=self.lr, betas=(0.9, 0.999), weight_decay=5e-4)
         
         #optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
         
