@@ -15,6 +15,7 @@ args.num_classes = 10
 args.model = "Resnet18"
 args.pretrained = 1
 args.device = "cuda"
+args.batch_size = 16
 
 import logging
 import sys
@@ -46,7 +47,7 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   num_clients=args.total_client,
                                   num_classes=args.num_classes,
                                   balance=True,
-                                  partition="dirichlet",
+                                  partition="iid",
                                   seed=args.seed,
                                   dir_alpha=args.alpha,
                                   preprocess=args.preprocess,
