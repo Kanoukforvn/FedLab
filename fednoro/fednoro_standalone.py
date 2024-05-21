@@ -46,6 +46,7 @@ if args.dataname == "cifar10":
     args.n_classes = 10
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler(f'log_dataset_{args.dataname}_noise_lvl_{args.level_n_system}_num_client_{args.total_client}')])
+logging.info("This is a logging statement to stdout.")
 
 sys.path.append("../")
 
