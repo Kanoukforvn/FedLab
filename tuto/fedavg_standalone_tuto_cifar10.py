@@ -44,8 +44,8 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   path="../datasets/cifar10/fedcifar10/",
                                   dataname=args.dataname,
                                   num_clients=args.total_client,
-                                  num_classes=args.num_classes,
-                                  balance=False,
+                                  num_classes=args.n_classes,
+                                  balance=True,
                                   partition="dirichlet",
                                   seed=args.seed,
                                   dir_alpha=args.alpha,
@@ -54,8 +54,13 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   verbose=True,
                                   transform=transforms.ToTensor())
 
-dataset = fed_cifar10.get_dataset(0) # get the 0-th client's dataset
-dataloader = fed_cifar10.get_dataloader(0, batch_size=16) # get the 0-th client's dataset loader with batch size 128
+# Get the dataset for the 0-th client
+dataset_train = fed_cifar10.get_dataset(0, type="train")
+dataset_test = fed_cifar10.get_dataset(0, type="test")
+
+# Get the dataloaders
+dataloader_train = fed_cifar10.get_dataloader(0, args.batch_size, type="train")
+dataloader_test = fed_cifar10.get_dataloader(0, args.batch_size, type="test")
 
 # generate partition report
 csv_file = f"./partition-reports/{args.dataname}_hetero_dir_{args.alpha}_{args.total_client}clients.csv"
