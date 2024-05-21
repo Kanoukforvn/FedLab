@@ -19,14 +19,15 @@ args.device = "cpu"
 import logging
 import sys
 
-logging.basicConfig(
-    stream=sys.stdout,
-    level=logging.INFO)
+logging.basicConfig(level=logging.INFO,
+                        format='[%(asctime)s.%(msecs)03d] %(message)s', 
+                        datefmt='%H:%M:%S',
+                        stream=sys.stdout)
+
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout)) #use for kaggle
 
 sys.path.append("../")
 
-
-from fedlab.models.mlp import MLP
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.models.build_model import build_model
 
@@ -39,10 +40,8 @@ from torchvision import transforms
 from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
 import pandas as pd
 
-trainset = torchvision.datasets.CIFAR10(root="../../../../data/CIFAR10/", train=True, download=True)
-
 fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
-                                  path="../datasets/cifar10/fedcifar10_2/",
+                                  path="../datasets/cifar10/fedcifar10/",
                                   dataname=args.dataname,
                                   num_clients=args.total_client,
                                   num_classes=args.num_classes,

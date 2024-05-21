@@ -45,7 +45,7 @@ class FedNoRoServerHandler(SyncServerHandler):
     def global_update_daagg(self, buffer, clean_clients, noisy_clients):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]        
-        serialized_parameters = DaAggregator.DaAgg(parameters_list, self.model_parameters, clean_clients, noisy_clients)
+        serialized_parameters = DaAggregator.DaAgg(parameters_list, clean_clients, noisy_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
     def load(self, payload: List[torch.Tensor], clean_clients, noisy_clients) -> bool:
@@ -87,10 +87,8 @@ class FedNoRoServerHandler(SyncServerHandler):
 class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
 
     def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
-                 warmup_rounds=5, epochs_warmup=5, lr=0.1, epochs=5, num_class = 10) -> None:
+                lr=0.0003, epochs=5, num_class = 10) -> None:
         super().__init__(model, num_clients, cuda, device, personal)
-        self.warmup_rounds = warmup_rounds #FIXME replace  com round with warm up round
-        self.epochs_warmup = epochs_warmup
         self.lr = lr
         self.epochs = epochs
         self.iteration = 0
@@ -203,8 +201,10 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
         self.student_net.train()
         self.teacher_net.eval()
 
-        self.optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
-
+        # set the optimizer
+        self.optimizer = torch.optim.Adam(
+             self._model.parameters(), lr=self.lr, betas=(0.9, 0.999), weight_decay=5e-4)
+        
         for epoch in range(self.epochs):
         
             epoch_loss = []
