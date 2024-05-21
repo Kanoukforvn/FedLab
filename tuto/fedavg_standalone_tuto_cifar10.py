@@ -6,7 +6,7 @@ import torchvision
 args = Munch
 
 args.total_client = 2
-args.alpha = 0.1
+args.alpha = 2
 args.seed = 0
 args.preprocess = True
 args.cuda = True
