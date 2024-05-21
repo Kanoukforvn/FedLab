@@ -9,12 +9,12 @@ args.total_client = 20
 args.alpha = 0.1
 args.seed = 0
 args.preprocess = True
-args.cuda = False
+args.cuda = True
 args.dataname = "cifar10"
 args.num_classes = 10
 args.model = "Resnet18"
 args.pretrained = 1
-args.device = "cpu"
+args.device = "cuda"
 
 import logging
 import sys
@@ -40,7 +40,6 @@ from torchvision import transforms
 from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
 import pandas as pd
 
-logging.info("partitioning")
 fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   path="../datasets/cifar10/fedcifar10/",
                                   dataname=args.dataname,
@@ -54,7 +53,6 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   download=True,
                                   verbose=True,
                                   transform=transforms.ToTensor())
-logging.info("down")
 
 # Get the dataset for the 0-th client
 dataset_train = fed_cifar10.get_dataset(0, type="train")
