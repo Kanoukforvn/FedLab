@@ -187,7 +187,7 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             
             # Log the learning rate
             current_lr = optimizer.param_groups[0]['lr']
-            logging.info(f'Epoch {epoch + 1}, Learning rate: {current_lr}')
+            #logging.info(f'Epoch {epoch + 1}, Learning rate: {current_lr}')
             
             avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
             self.scheduler.step()  # Step the scheduler
@@ -234,7 +234,7 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             
             # Log the learning rate
             current_lr = self.optimizer.param_groups[0]['lr']
-            logging.info(f'Epoch {epoch + 1}, Learning rate: {current_lr}')
+            #logging.info(f'Epoch {epoch + 1}, Learning rate: {current_lr}')
             
             self.scheduler.step()  # Step the scheduler
 

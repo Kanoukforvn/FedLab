@@ -52,14 +52,8 @@ logging.basicConfig(level=logging.INFO,
                         datefmt='%H:%M:%S',
                         stream=sys.stdout)
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout)) #useful for kaggle
 
-logging.info("This is a logging statement to stdout.")
-logger = logging.getLogger()
-logger.info("Log message before flush")
-for handler in logger.handlers:
-    handler.flush()
-logger.info("Log message after flush")
 sys.path.append("../")
 
 cwd = os.getcwd()
