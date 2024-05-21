@@ -47,7 +47,11 @@ if args.dataname == "cifar10":
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler(f'log_dataset_{args.dataname}_noise_lvl_{args.level_n_system}_num_client_{args.total_client}')])
 logging.info("This is a logging statement to stdout.")
-
+logger = logging.getLogger()
+logger.info("Log message before flush")
+for handler in logger.handlers:
+    handler.flush()
+logger.info("Log message after flush")
 sys.path.append("../")
 
 cwd = os.getcwd()
