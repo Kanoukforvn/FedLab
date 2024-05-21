@@ -79,7 +79,6 @@ from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
 ############################################
 #           Set up the dataset             #
 ############################################
-logging.info("partiotioning")
 fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   path="../datasets/cifar10/fedcifar10/",
                                   dataname=args.dataname,
@@ -93,7 +92,6 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   download=True,
                                   verbose=True,
                                   transform=transforms.ToTensor())
-logging.info("down")
 # Get the dataset for the 0-th client
 dataset_train = fed_cifar10.get_dataset(0, type="train")
 dataset_test = fed_cifar10.get_dataset(0, type="test")
