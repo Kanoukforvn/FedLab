@@ -95,9 +95,12 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   download=True,
                                   verbose=True,
                                   transform=transforms.ToTensor())
+
 # Get the dataset for the 0-th client
 dataset_train = fed_cifar10.get_dataset(0, type="train")
 dataset_test = fed_cifar10.get_dataset(0, type="test")
+
+logging.info(len(dataset_train))
 
 # Get the dataloaders
 dataloader_train = fed_cifar10.get_dataloader(0, type="train")
@@ -328,7 +331,7 @@ from sklearn.mixture import GaussianMixture
 #                                       transform=transforms.ToTensor())
 
 #train_loader = dataloader_train
-train_loader = DataLoader(fed_cifar10, batch_size=256,
+train_loader = DataLoader(dataset_train, batch_size=256,
                         shuffle=False, num_workers=4)
 
 criterion = nn.CrossEntropyLoss(reduction='none')
