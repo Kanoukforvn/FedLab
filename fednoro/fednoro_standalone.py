@@ -35,13 +35,13 @@ args.n_type = "random"
 args.epochs = 5
 args.batch_size = 128
 args.lr = 0.0003
-args.warm_up_round = 15
+args.warm_up_round = 5
 args.sample_ratio = 1
 args.begin = 10
 args.end = 49
 args.a = 0.8 
 args.exp = "Fed"       
-args.com_round = 100-args.warm_up_round
+args.com_round = 5-args.warm_up_round
 args.deterministic = 1
 args.warm = 1
 
@@ -296,7 +296,7 @@ class EvalPipelineS1(StandalonePipeline):
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=True,
                                        transform=transforms.ToTensor())
-test_loader = DataLoader(dataset_test, batch_size=32)
+test_loader = DataLoader(dataset_test, batch_size=1024)
 
 if args.warm:    
     # Run evaluation
@@ -326,7 +326,7 @@ from sklearn.mixture import GaussianMixture
 #                                       train=True,
 #                                       transform=transforms.ToTensor())
 
-train_loader = DataLoader(dataset_train, batch_size=32,
+train_loader = DataLoader(dataset_train, batch_size=1024,
                         shuffle=False, num_workers=4)
 
 criterion = nn.CrossEntropyLoss(reduction='none')
