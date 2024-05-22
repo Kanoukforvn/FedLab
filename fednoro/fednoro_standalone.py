@@ -17,7 +17,7 @@ from munch import Munch
 
 args = Munch
 
-args.total_client = 20
+args.total_client = 5
 args.alpha = 2
 args.seed = 0
 args.preprocess = True
@@ -296,7 +296,7 @@ class EvalPipelineS1(StandalonePipeline):
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=True,
                                        transform=transforms.ToTensor())
-test_loader = DataLoader(test_data, batch_size=32)
+test_loader = DataLoader(dataset_test, batch_size=32)
 
 if args.warm:    
     # Run evaluation
@@ -319,10 +319,11 @@ model.load_state_dict(torch.load(model_path))
 from sklearn.mixture import GaussianMixture
 
 
-train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
-                                       train=True,
-                                       transform=transforms.ToTensor())
-train_loader = DataLoader(train_data, batch_size=32)
+#train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
+#                                       train=True,
+#                                       transform=transforms.ToTensor())
+
+train_loader = DataLoader(dataset_train, batch_size=32)
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
@@ -369,7 +370,7 @@ logging.info(f"selected clean clients: {clean_clients}")
 #    Stage 2 - Noise-Robust Training       #
 ############################################
 
-"""
+
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda, lr=args.lr)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
@@ -524,3 +525,4 @@ logging.info(BACC[-10:].mean())
 logging.info("best:")
 logging.info(BACC.max())
 torch.cuda.empty_cache()
+"""
