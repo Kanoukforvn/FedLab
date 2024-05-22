@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from collections import Counter
 import numpy as np
 import torch.nn as nn
+import torch.backends.cudnn as cudnn
 
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix
 
@@ -41,6 +42,7 @@ args.end = 49
 args.a = 0.8 
 args.exp = "Fed"       
 args.com_round = 100-args.warm_up_round
+args.deterministic = 1
 
 if args.dataname == "cifar10":
     args.n_classes = 10
@@ -105,6 +107,10 @@ logging.info(
 logging.info(
     f"test: {Counter(fed_cifar10.targets_test)}, total: {len(fed_cifar10.targets_test)}")
 
+if args.deterministic:
+    cudnn.benchmark = False
+    cudnn.deterministic = True
+    set_seed(args.seed)
 
 ############################################
 #                  Dataset                 #
@@ -180,8 +186,7 @@ plt.show()
 # local train configuration
 
 model = build_model(args)
-        
-set_seed(args.seed)
+
 
 ############################################
 #           Stage 1 - Warm Up              #
@@ -287,7 +292,7 @@ class EvalPipelineS1(StandalonePipeline):
         
 
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
-                                       train=False,
+                                       train=True,
                                        transform=transforms.ToTensor())
 test_loader = DataLoader(test_data, batch_size=32)
 
