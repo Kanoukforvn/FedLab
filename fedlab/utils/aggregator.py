@@ -71,17 +71,20 @@ class Aggregators(object):
     
     @staticmethod
     def calculate_divergence(client_model, global_model):
-        # Assuming client_model and global_model are lists of tensors
-        divergence = 0.0
-        num_weights = len(global_model)
         total_divergence = 0.0
 
+        # Move models to GPU
+        client_model = [w.cuda() for w in client_model]
+        global_model = [w.cuda() for w in global_model]
+
         for w_client, w_global in zip(client_model, global_model):
+            # Use GPU operations for the calculations
             w_client_flat = w_client.flatten()
             w_global_flat = w_global.flatten()
             total_divergence += torch.sum(torch.abs((w_client_flat - w_global_flat) / w_global_flat))
 
-        divergence = total_divergence.item() / num_weights
+        # Calculate divergence and move result back to CPU
+        divergence = total_divergence.item() / len(global_model)
         return divergence
 
     @staticmethod
