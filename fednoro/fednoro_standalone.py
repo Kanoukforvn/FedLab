@@ -17,7 +17,7 @@ from munch import Munch
 
 args = Munch
 
-args.total_client = 20
+args.total_client = 5
 args.alpha = 2
 args.seed = 0
 args.preprocess = True
