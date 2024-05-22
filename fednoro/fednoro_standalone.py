@@ -17,7 +17,7 @@ from munch import Munch
 
 args = Munch
 
-args.total_client = 5
+args.total_client = 20
 args.alpha = 2
 args.seed = 0
 args.preprocess = True
@@ -326,7 +326,8 @@ from sklearn.mixture import GaussianMixture
 #                                       train=True,
 #                                       transform=transforms.ToTensor())
 
-train_loader = DataLoader(dataset_train, batch_size=32)
+train_loader = DataLoader(dataset_train, batch_size=32,
+                        shuffle=False, num_workers=4)
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
