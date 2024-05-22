@@ -341,6 +341,8 @@ logging.info(f"size train_loader :{len(dataset_train)}")
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
 
+logging.info(f"size train_loader :{len(loss)}")
+
 metrics = np.zeros((args.total_client, args.n_classes)).astype("float")
 num = np.zeros((args.total_client, args.n_classes)).astype("float")
 user_id = list(range(args.total_client))
