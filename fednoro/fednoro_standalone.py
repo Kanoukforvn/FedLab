@@ -296,6 +296,7 @@ class EvalPipelineS1(StandalonePipeline):
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=True,
                                        transform=transforms.ToTensor())
+
 test_loader = DataLoader(dataset_test, batch_size=256)
 
 if args.warm:    
@@ -326,9 +327,9 @@ from sklearn.mixture import GaussianMixture
 #                                       train=True,
 #                                       transform=transforms.ToTensor())
 
-train_loader = dataloader_train
-#DataLoader(dataset_train, batch_size=1024,
-#                        shuffle=False, num_workers=4)
+#train_loader = dataloader_train
+train_loader = DataLoader(fed_cifar10, batch_size=256,
+                        shuffle=False, num_workers=4)
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
