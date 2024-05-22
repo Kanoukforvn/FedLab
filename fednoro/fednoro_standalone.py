@@ -326,8 +326,9 @@ from sklearn.mixture import GaussianMixture
 #                                       train=True,
 #                                       transform=transforms.ToTensor())
 
-train_loader = DataLoader(dataset_train, batch_size=1024,
-                        shuffle=False, num_workers=4)
+train_loader = dataloader_train
+#DataLoader(dataset_train, batch_size=1024,
+#                        shuffle=False, num_workers=4)
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
