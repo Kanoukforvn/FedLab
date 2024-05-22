@@ -43,6 +43,7 @@ args.a = 0.8
 args.exp = "Fed"       
 args.com_round = 100-args.warm_up_round
 args.deterministic = 1
+args.warm = 0
 
 if args.dataname == "cifar10":
     args.n_classes = 10
@@ -66,10 +67,10 @@ sys.path.append(project_root)
 from fedlab.models.build_model import build_model
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA_KD, DaAggregator
-from fedlab.utils.fednoro_utils import add_noise, set_seed, get_output, get_current_consistency_weight
+from fedlab.utils.fednoro_utils import add_noise, set_seed, get_output, get_current_consistency_weight, set_output_files
 from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler, FedAvgServerHandler
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
-
+from fedlab.contrib.algorithm.local_training import LocalUpdate, globaltest
 
 # We provide a example usage of patitioned CIFAR10 dataset
 # Download raw CIFAR10 dataset and partition them according to given configuration
@@ -297,14 +298,17 @@ test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        transform=transforms.ToTensor())
 test_loader = DataLoader(test_data, batch_size=32)
 
-# Run evaluation
-eval_pipeline_s1 = EvalPipelineS1(handler=handler, trainer=trainer, test_loader=test_loader)
-eval_pipeline_s1.main()
-eval_pipeline_s1.show()
+if args.warm:    
+    # Run evaluation
+    eval_pipeline_s1 = EvalPipelineS1(handler=handler, trainer=trainer, test_loader=test_loader)
+    eval_pipeline_s1.main()
+    eval_pipeline_s1.show()
 
 ############################################
 #      Stage 1-2 - Client Selection        #
 ############################################
+
+eval_pipeline_s1.best_round_number=14 #FIXME to test s2
 
 model_path = f"./model/stage1_model_{eval_pipeline_s1.best_round_number}.pth"
 logging.info(
@@ -365,7 +369,7 @@ logging.info(f"selected clean clients: {clean_clients}")
 #    Stage 2 - Noise-Robust Training       #
 ############################################
 
-
+"""
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda, lr=args.lr)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
@@ -461,4 +465,62 @@ eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, noisy_client
 eval_pipeline_s2.main()
 eval_pipeline_s2.show()
 
+
+torch.cuda.empty_cache()
+"""
+
+writer, models_dir = set_output_files(args)
+
+user_id = list(range(args.total_client))
+trainer_locals = []
+for id in user_id:
+    trainer_locals.append(LocalUpdate(
+        args, id, copy.deepcopy(dataset_train), fed_cifar10.data_indices_train[id]))
+
+
+# ------------------------ Stage 2: ------------------------ 
+BACC = []
+for rnd in range(args.warm_up_round, args.com_round):
+    w_locals, loss_locals = [], []
+    weight_kd = get_current_consistency_weight(
+        rnd, args.begin, args.end) * args.a
+    writer.add_scalar(f'train/w_kd', weight_kd, rnd)
+    for idx in user_id:  # training over the subset
+        local = trainer_locals[idx]
+        if idx in clean_clients:
+            w_local, loss_local = local.train_LA(
+                net=copy.deepcopy(model).to(args.device), writer=writer)
+        elif idx in noisy_clients:
+            w_local, loss_local = local.train_FedNoRo(
+                student_net=copy.deepcopy(model).to(args.device), teacher_net=copy.deepcopy(model).to(args.device), writer=writer, weight_kd=weight_kd)
+        # store every updated model
+        w_locals.append(copy.deepcopy(w_local))
+        loss_locals.append(copy.deepcopy(loss_local))
+        assert len(w_locals) == len(loss_locals) == idx+1
+    dict_len = [len(fed_cifar10.data_indices_train[idx]) for idx in user_id]
+    w_glob_fl = DaAggregator.DaAgg(
+        w_locals, dict_len, clean_clients, noisy_clients)
+    model.load_state_dict(copy.deepcopy(w_glob_fl))
+    pred = globaltest(copy.deepcopy(model).to(
+        args.device), dataset_test, args)
+    acc = accuracy_score(fed_cifar10.targets_test, pred)
+    bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
+    cm = confusion_matrix(fed_cifar10.targets_test, pred)
+    logging.info(
+        "******** round: %d, acc: %.4f, bacc: %.4f ********" % (rnd, acc, bacc))
+    logging.info(cm)
+    writer.add_scalar(f'test/acc', acc, rnd)
+    writer.add_scalar(f'test/bacc', bacc, rnd)
+    BACC.append(bacc)
+    # save model
+    if bacc > best_performance:
+        best_performance = bacc
+    logging.info(f'best bacc: {best_performance}, now bacc: {bacc}')
+    logging.info('\n')
+torch.save(model.state_dict(), models_dir + f'stage2_model_{rnd}.pth')
+BACC = np.array(BACC)
+logging.info("last:")
+logging.info(BACC[-10:].mean())
+logging.info("best:")
+logging.info(BACC.max())
 torch.cuda.empty_cache()

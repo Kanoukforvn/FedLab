@@ -9,7 +9,9 @@ import logging
 import torch
 import torch.nn.functional as F
 
+
 from sklearn.metrics import balanced_accuracy_score
+from tensorboardX import SummaryWriter
 
 logging.basicConfig(level = logging.INFO)
 
@@ -209,7 +211,6 @@ def set_seed(seed):
     np.random.seed(seed)
     random.seed(seed)
 
-"""
 def set_output_files(args):
     outputs_dir = 'outputs_' + str(args.dataname) + '_' + str(
         args.level_n_system) + '_' + str(args.level_n_lowerb) + '_' + str(args.level_n_upperb)
@@ -240,7 +241,7 @@ def set_output_files(args):
     logging.info(str(args))
     writer = SummaryWriter(tensorboard_dir)
     return writer, models_dir
-"""
+
 def identify_noise_type(labels, noisy_labels):
     """
     Identify the type of noise based on label mismatch proportions.

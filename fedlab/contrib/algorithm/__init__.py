@@ -14,3 +14,4 @@ from .qfedavg import qFedAvgClientTrainer, qFedAvgServerHandler
 from .scaffold import ScaffoldSerialClientTrainer, ScaffoldServerHandler
 from .fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler
 from .fedmdcs import FedMDCSServerHandler
+from .local_training import LocalUpdate
