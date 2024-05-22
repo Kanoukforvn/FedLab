@@ -100,8 +100,6 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
 dataset_train = fed_cifar10.get_dataset(0, type="train")
 dataset_test = fed_cifar10.get_dataset(0, type="test")
 
-logging.info(len(dataset_train))
-
 # Get the dataloaders
 dataloader_train = fed_cifar10.get_dataloader(0, type="train")
 dataloader_test = fed_cifar10.get_dataloader(0, type="test")
@@ -318,12 +316,17 @@ else:
     best_round_number=14
     model_path = f"./model/stage1_model_{best_round_number}.pth"
 
+
+logging.info("size 1 :",len(dataset_train))
+
 logging.info(
     f"********************** load model from: {model_path} **********************")
 
 model.load_state_dict(torch.load(model_path))
 
 from sklearn.mixture import GaussianMixture
+
+logging.info("size 2 :",len(dataset_train))
 
 
 #train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
