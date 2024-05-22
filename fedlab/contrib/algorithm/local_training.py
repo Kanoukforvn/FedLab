@@ -6,7 +6,8 @@ import torch.optim
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
-from utils.losses import LogitAdjust, LA_KD
+
+from ...utils.fednoro_losses import LogitAdjust, LA_KD
 
 
 def globaltest(net, test_dataset, args):
