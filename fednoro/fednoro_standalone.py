@@ -187,6 +187,7 @@ plt.show()
 
 model = build_model(args)
 
+set_seed(args.seed)
 
 ############################################
 #           Stage 1 - Warm Up              #

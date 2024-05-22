@@ -163,7 +163,6 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
         self.set_model(model_parameters.cuda(self.device))
         self._model.train()
 
-
         # set the optimizer
         optimizer = torch.optim.Adam(
              self._model.parameters(), lr=self.lr, betas=(0.9, 0.999), weight_decay=5e-4)
