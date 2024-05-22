@@ -43,7 +43,7 @@ args.a = 0.8
 args.exp = "Fed"       
 args.com_round = 100-args.warm_up_round
 args.deterministic = 1
-args.warm = 0
+args.warm = 1
 
 if args.dataname == "cifar10":
     args.n_classes = 10
