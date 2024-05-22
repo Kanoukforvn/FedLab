@@ -33,7 +33,7 @@ args.level_n_upperb = 0.7
 args.level_n_system = 0.4
 args.n_type = "random"
 args.epochs = 5
-args.batch_size = 16
+args.batch_size = 128
 args.lr = 0.0003
 args.warm_up_round = 5
 args.sample_ratio = 1
@@ -100,8 +100,8 @@ dataset_train = fed_cifar10.get_dataset(0, type="train")
 dataset_test = fed_cifar10.get_dataset(0, type="test")
 
 # Get the dataloaders
-dataloader_train = fed_cifar10.get_dataloader(0,batch_size=32, type="train")
-dataloader_test = fed_cifar10.get_dataloader(0,batch_size=32, type="test")
+dataloader_train = fed_cifar10.get_dataloader(0, type="train")
+dataloader_test = fed_cifar10.get_dataloader(0, type="test")
 
 logging.info(
     f"train: {Counter(fed_cifar10.targets_train)}, total: {len(fed_cifar10.targets_train)}")
