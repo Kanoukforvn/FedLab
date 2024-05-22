@@ -308,9 +308,12 @@ if args.warm:
 #      Stage 1-2 - Client Selection        #
 ############################################
 
-best_round_number=14 #FIXME to test s2 
 
-model_path = f"./model/stage1_model_{best_round_number}.pth" #eval_pipeline_s1.best_round_number
+    model_path = f"./model/stage1_model_{eval_pipeline_s1.best_round_number}.pth" #eval_pipeline_s1.best_round_number
+else:
+    best_round_number=14
+    model_path = f"./model/stage1_model_{best_round_number}.pth"
+
 logging.info(
     f"********************** load model from: {model_path} **********************")
 
