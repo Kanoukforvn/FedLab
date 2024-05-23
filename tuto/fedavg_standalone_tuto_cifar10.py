@@ -6,7 +6,7 @@ import torchvision
 args = Munch
 
 args.total_client = 20
-args.alpha = 0.3
+args.alpha = 0.1
 args.seed = 0
 args.preprocess = True
 args.cuda = True
@@ -46,7 +46,7 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   dataname=args.dataname,
                                   num_clients=args.total_client,
                                   num_classes=args.num_classes,
-                                  balance=True,
+                                  balance=False,
                                   partition="dirichlet",
                                   seed=args.seed,
                                   dir_alpha=args.alpha,
