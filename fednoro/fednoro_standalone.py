@@ -325,13 +325,12 @@ model.load_state_dict(torch.load(model_path))
 
 from sklearn.mixture import GaussianMixture
 
-#train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
-#                                       train=True,
-#                                       transform=transforms.ToTensor())
+train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
+                                       train=True,
+                                       transform=transforms.ToTensor())
 
 #train_loader = dataloader_train
-train_loader = DataLoader(dataset_train, batch_size=32,
-                        shuffle=False, num_workers=4)
+train_loader = DataLoader(train_data, shuffle=False, num_workers=4)
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
