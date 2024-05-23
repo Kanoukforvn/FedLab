@@ -298,7 +298,7 @@ test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=True,
                                        transform=transforms.ToTensor())
 
-test_loader = DataLoader(dataset_test, batch_size=256)
+test_loader = DataLoader(dataset_test, batch_size=512)
 
 if args.warm:    
     # Run evaluation
