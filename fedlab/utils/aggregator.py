@@ -73,12 +73,14 @@ class Aggregators(object):
     def calculate_divergence(client_model, global_model):
         total_divergence = 0.0
 
-        # Move models to GPU
-        client_model = [w.cuda() for w in client_model]
-        global_model = [w.cuda() for w in global_model]
-
+        # Ensure models are on the same device
+        device = client_model[0].device
         for w_client, w_global in zip(client_model, global_model):
-            # Use GPU operations for the calculations
+            # Ensure both client and global weights are on the GPU
+            w_client = w_client.to(device)
+            w_global = w_global.to(device)
+            
+            # Flatten and calculate divergence on the GPU
             w_client_flat = w_client.flatten()
             w_global_flat = w_global.flatten()
             total_divergence += torch.sum(torch.abs((w_client_flat - w_global_flat) / w_global_flat))
@@ -120,6 +122,7 @@ class Aggregators(object):
         aggregated_model = Aggregators.fedavg_aggregate(selected_models, selected_weights)
 
         return aggregated_model
+    
         
 class DaAggregator:
     @staticmethod
