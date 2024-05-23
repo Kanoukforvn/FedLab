@@ -317,7 +317,6 @@ else:
     model_path = f"./model/stage1_model_{best_round_number}.pth"
 
 
-logging.info(f"size 1 :{len(dataset_train)}")
 
 logging.info(
     f"********************** load model from: {model_path} **********************")
@@ -325,8 +324,6 @@ logging.info(
 model.load_state_dict(torch.load(model_path))
 
 from sklearn.mixture import GaussianMixture
-
-
 
 #train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
 #                                       train=True,
@@ -336,12 +333,10 @@ from sklearn.mixture import GaussianMixture
 train_loader = DataLoader(dataset_train, batch_size=32,
                         shuffle=False, num_workers=4)
 
-logging.info(f"size train_loader :{len(dataset_train)}")
-
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
 
-logging.info(f"size train_loader :{len(loss)}")
+logging.info(f"size loss :{len(loss)}")
 
 metrics = np.zeros((args.total_client, args.n_classes)).astype("float")
 num = np.zeros((args.total_client, args.n_classes)).astype("float")
