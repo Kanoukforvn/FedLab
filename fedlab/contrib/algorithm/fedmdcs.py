@@ -28,14 +28,25 @@ class FedMDCSServerHandler(SyncServerHandler):
         super(FedMDCSServerHandler, self).__init__(model, global_round, num_clients, sample_ratio, cuda, device, sampler, logger)
         self.top_n_clients = top_n_clients
 
+        # Move the model to the specified device
+        self.device = device
+        if self.device is None:
+            self.device = torch.device('cuda' if torch.cuda.is_available() and cuda else 'cpu')
+        self._model.to(self.device)
+
     def global_update(self, buffer):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
+        
+        # Ensure all parameters are on the correct device
+        parameters_list = [[param.to(self.device) for param in params] for params in parameters_list]
+        self.model_parameters = [param.to(self.device) for param in self.model_parameters]
         
         # Call FedMDCSAgg with top_n_clients parameter
         serialized_parameters = Aggregators.FedMDCSAgg(parameters_list, self.model_parameters, self.top_n_clients)
         SerializationTool.deserialize_model(self._model, serialized_parameters)
 
+        
 ##################
 #
 #      Client
