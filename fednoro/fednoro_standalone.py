@@ -42,7 +42,7 @@ args.end = 49
 args.a = 0.8 
 args.exp = "Fed"       
 args.com_round = 100-args.warm_up_round
-args.deterministic = 1
+#args.deterministic = 1
 args.warm = 1
 
 if args.dataname == "cifar10":
@@ -196,7 +196,7 @@ from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDCli
 
 # Create client trainer and server handler
 
-trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda)
+trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
@@ -369,7 +369,7 @@ logging.info(f"selected clean clients: {clean_clients}")
 ############################################
 
 
-trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda, lr=args.lr)
+trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda, base_lr=args.lr)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
