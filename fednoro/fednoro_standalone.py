@@ -70,7 +70,6 @@ from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA
 from fedlab.utils.fednoro_utils import add_noise, set_seed, get_output, get_current_consistency_weight, set_output_files
 from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler, FedAvgServerHandler
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
-from fedlab.contrib.algorithm.local_training import LocalUpdate, globaltest
 
 # We provide a example usage of patitioned CIFAR10 dataset
 # Download raw CIFAR10 dataset and partition them according to given configuration
@@ -101,18 +100,13 @@ dataset_train = fed_cifar10.get_dataset(0, type="train")
 dataset_test = fed_cifar10.get_dataset(0, type="test")
 
 # Get the dataloaders
-dataloader_train = fed_cifar10.get_dataloader(0, type="train")
-dataloader_test = fed_cifar10.get_dataloader(0, type="test")
+dataloader_train = fed_cifar10.get_dataloader(0, args.batch_size, type="train")
+dataloader_test = fed_cifar10.get_dataloader(0, args.batch_size, type="test")
 
 logging.info(
     f"train: {Counter(fed_cifar10.targets_train)}, total: {len(fed_cifar10.targets_train)}")
 logging.info(
     f"test: {Counter(fed_cifar10.targets_test)}, total: {len(fed_cifar10.targets_test)}")
-
-if args.deterministic:
-    cudnn.benchmark = False
-    cudnn.deterministic = True
-    set_seed(args.seed)
 
 ############################################
 #                  Dataset                 #
@@ -295,27 +289,25 @@ class EvalPipelineS1(StandalonePipeline):
         
 
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
-                                       train=True,
+                                       train=False,
                                        transform=transforms.ToTensor())
 
-test_loader = DataLoader(dataset_test, batch_size=32)
+test_loader = DataLoader(test_data, batch_size=32)
 
 if args.warm:    
     # Run evaluation
     eval_pipeline_s1 = EvalPipelineS1(handler=handler, trainer=trainer, test_loader=test_loader)
     eval_pipeline_s1.main()
     eval_pipeline_s1.show()
-
-############################################
-#      Stage 1-2 - Client Selection        #
-############################################
-
-
     model_path = f"./model/stage1_model_{eval_pipeline_s1.best_round_number}.pth" #eval_pipeline_s1.best_round_number
 else:
     best_round_number=14
     model_path = f"./model/stage1_model_{best_round_number}.pth"
 
+
+############################################
+#      Stage 1-2 - Client Selection        #
+############################################
 
 
 logging.info(
@@ -333,8 +325,6 @@ train_loader = DataLoader(train_data, batch_size=32)
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
-
-logging.info(f"size loss :{len(loss)}")
 
 metrics = np.zeros((args.total_client, args.n_classes)).astype("float")
 num = np.zeros((args.total_client, args.n_classes)).astype("float")
@@ -452,8 +442,7 @@ class EvalPipelineS2(StandalonePipeline):
             self.bacc.append(bacc)
             t += 1
         
-        logging.info('Final best accuracy: {:.4f}, Best balanced accuracy {:.4f}'.format(self.best_performance, self.best_balanced_accuracy))
-
+        logging.info('Final best accuracy: {:.4f}, Best balanced accuracy {:.4f}, Best model number : {} '.format(self.best_performance, self.best_balanced_accuracy, self.best_round_number))
 
     def show(self):
         plt.figure(figsize=(8, 4.5))
@@ -488,5 +477,3 @@ eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, noisy_client
 eval_pipeline_s2.main()
 eval_pipeline_s2.show()
 eval_pipeline_s2.show_b()
-
-torch.cuda.empty_cache()
