@@ -175,6 +175,6 @@ class PartitionedCIFAR10(FedDataset):
         """Return dataload for client with client ID ``cid``."""
         dataset = self.get_dataset(cid, type)
         batch_size = len(dataset) if batch_size is None else batch_size
-        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=4)
+        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         return data_loader
 
