@@ -17,7 +17,7 @@ from munch import Munch
 
 args = Munch
 
-args.total_client = 5
+args.total_client = 20
 args.alpha = 2
 args.seed = 0
 args.preprocess = True
@@ -33,15 +33,15 @@ args.level_n_upperb = 0.7
 args.level_n_system = 0.4
 args.n_type = "random"
 args.epochs = 5
-args.batch_size = 128
+args.batch_size = 16
 args.lr = 0.0003
-args.warm_up_round = 5
+args.warm_up_round = 19
 args.sample_ratio = 1
 args.begin = 10
 args.end = 49
 args.a = 0.8 
 args.exp = "Fed"       
-args.com_round = 5-args.warm_up_round
+args.com_round = 100-args.warm_up_round
 args.deterministic = 1
 args.warm = 1
 
@@ -55,7 +55,7 @@ logging.basicConfig(level=logging.INFO,
                         datefmt='%H:%M:%S',
                         stream=sys.stdout)
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout)) #useful for kaggle
+#logging.getLogger().addHandler(logging.StreamHandler(sys.stdout)) #useful for kaggle
 
 sys.path.append("../")
 
@@ -298,7 +298,7 @@ test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=True,
                                        transform=transforms.ToTensor())
 
-test_loader = DataLoader(dataset_test, batch_size=512)
+test_loader = DataLoader(dataset_test, batch_size=32)
 
 if args.warm:    
     # Run evaluation
@@ -329,7 +329,7 @@ train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=True,
                                        transform=transforms.ToTensor())
 
-train_loader = DataLoader(train_data, shuffle=False, num_workers=4)
+train_loader = DataLoader(train_data, batch_size=32)
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
@@ -452,7 +452,7 @@ class EvalPipelineS2(StandalonePipeline):
             self.bacc.append(bacc)
             t += 1
         
-        logging.info('Final best accuracy: {:.4f}, Best balanced accuracy {:.4f}, Best model number : {} '.format(self.best_performance, self.best_balanced_accuracy, self.best_round_number))
+        logging.info('Final best accuracy: {:.4f}, Best balanced accuracy {:.4f}'.format(self.best_performance, self.best_balanced_accuracy))
 
 
     def show(self):
@@ -467,70 +467,26 @@ class EvalPipelineS2(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuracy")
 
-        plt.savefig(f"./imgs/cifar10_dir_loss_accuracy_s2.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/cifar10_dir_loss_accuracy_s2_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
+    
+    def show_b(self):
+        plt.figure(figsize=(8,4.5))
+        ax = plt.subplot(1,2,1)
+        ax.plot(np.arange(len(self.loss)), self.loss)
+        ax.set_xlabel("Communication Round")
+        ax.set_ylabel("Loss")
         
+        ax2 = plt.subplot(1,2,2)
+        ax2.plot(np.arange(len(self.bacc)), self.bacc)
+        ax2.set_xlabel("Communication Round")
+        ax2.set_ylabel("Balanced Accuarcy")
+        
+        plt.savefig(f"./imgs/{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy.png", dpi=400, bbox_inches = 'tight')
+           
 # Run evaluation
 eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, noisy_clients=noisy_clients, clean_clients=clean_clients, test_loader=test_loader, args=args)
 eval_pipeline_s2.main()
 eval_pipeline_s2.show()
-
+eval_pipeline_s2.show_b()
 
 torch.cuda.empty_cache()
-"""
-
-writer, models_dir = set_output_files(args)
-
-user_id = list(range(args.total_client))
-trainer_locals = []
-for id in user_id:
-    trainer_locals.append(LocalUpdate(
-        args, id, copy.deepcopy(dataset_train), fed_cifar10.data_indices_train[id]))
-
-
-# ------------------------ Stage 2: ------------------------ 
-BACC = []
-for rnd in range(args.warm_up_round, args.com_round):
-    w_locals, loss_locals = [], []
-    weight_kd = get_current_consistency_weight(
-        rnd, args.begin, args.end) * args.a
-    writer.add_scalar(f'train/w_kd', weight_kd, rnd)
-    for idx in user_id:  # training over the subset
-        local = trainer_locals[idx]
-        if idx in clean_clients:
-            w_local, loss_local = local.train_LA(
-                net=copy.deepcopy(model).to(args.device), writer=writer)
-        elif idx in noisy_clients:
-            w_local, loss_local = local.train_FedNoRo(
-                student_net=copy.deepcopy(model).to(args.device), teacher_net=copy.deepcopy(model).to(args.device), writer=writer, weight_kd=weight_kd)
-        # store every updated model
-        w_locals.append(copy.deepcopy(w_local))
-        loss_locals.append(copy.deepcopy(loss_local))
-        assert len(w_locals) == len(loss_locals) == idx+1
-    dict_len = [len(fed_cifar10.data_indices_train[idx]) for idx in user_id]
-    w_glob_fl = DaAggregator.DaAgg(
-        w_locals, dict_len, clean_clients, noisy_clients)
-    model.load_state_dict(copy.deepcopy(w_glob_fl))
-    pred = globaltest(copy.deepcopy(model).to(
-        args.device), dataset_test, args)
-    acc = accuracy_score(fed_cifar10.targets_test, pred)
-    bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
-    cm = confusion_matrix(fed_cifar10.targets_test, pred)
-    logging.info(
-        "******** round: %d, acc: %.4f, bacc: %.4f ********" % (rnd, acc, bacc))
-    logging.info(cm)
-    writer.add_scalar(f'test/acc', acc, rnd)
-    writer.add_scalar(f'test/bacc', bacc, rnd)
-    BACC.append(bacc)
-    # save model
-    if bacc > best_performance:
-        best_performance = bacc
-    logging.info(f'best bacc: {best_performance}, now bacc: {bacc}')
-    logging.info('\n')
-torch.save(model.state_dict(), models_dir + f'stage2_model_{rnd}.pth')
-BACC = np.array(BACC)
-logging.info("last:")
-logging.info(BACC[-10:].mean())
-logging.info("best:")
-logging.info(BACC.max())
-torch.cuda.empty_cache()
-"""

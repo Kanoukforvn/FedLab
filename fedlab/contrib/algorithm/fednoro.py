@@ -87,9 +87,9 @@ class FedNoRoServerHandler(SyncServerHandler):
 class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
 
     def __init__(self, model, num_clients, cuda=False, device=None, logger=None, personal=False,
-                lr=0.0003, epochs=5, num_class = 10) -> None:
+                base_lr=0.0003, epochs=5, num_class = 10) -> None:
         super().__init__(model, num_clients, cuda, device, personal)
-        self.lr = lr
+        self.lr = base_lr
         self.epochs = epochs
         self.iteration = 0
         self.num_class = num_class
@@ -102,7 +102,7 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
         self.epochs = epochs
         self.batch_size = batch_size
         self.lr = lr
-
+        self.optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
         self.criterion = torch.nn.CrossEntropyLoss()
         cls_num_list = self.get_num_of_each_class_global(self.dataset)
         for client_index, label_counts in enumerate(cls_num_list):
@@ -164,10 +164,10 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
         self._model.train()
 
         # set the optimizer
-        optimizer = torch.optim.Adam(
-             self._model.parameters(), lr=self.lr, betas=(0.9, 0.999), weight_decay=5e-4)
+        #optimizer = torch.optim.Adam(
+        #     self._model.parameters(), lr=self.lr, betas=(0.9, 0.999), weight_decay=5e-4)
         
-        #optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
+        self.optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
         
         for epoch in range(self.epochs):
             
@@ -176,12 +176,12 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             for data, target in train_loader:
 
                 data, target = data.cuda(self.device), target.cuda(self.device)
-                optimizer.zero_grad()
+                self.optimizer.zero_grad()
                 logits = self._model(data)
                 loss = self.ce_criterion(logits, target)
                 loss.backward()
 
-                optimizer.step()
+                self.optimizer.step()
                 epoch_loss.append(loss.item())
                         
             avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
@@ -203,7 +203,7 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
         #optimizer = torch.optim.Adam(
         #     self._model.parameters(), lr=self.lr, betas=(0.9, 0.999), weight_decay=5e-4)
         
-        optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
+        self.optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
 
         for epoch in range(self.epochs):
         
@@ -214,7 +214,7 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             for images, labels in train_loader:
                 images, labels = images.to(self.device), labels.to(self.device)
 
-                optimizer.zero_grad()
+                self.optimizer.zero_grad()
                 logits = self._model(images)
 
                 with torch.no_grad():
@@ -225,7 +225,7 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
                 loss = loss.float()
                 loss.backward()
 
-                optimizer.step()
+                self.optimizer.step()
                 batch_loss.append(loss.item())
 
             epoch_loss.append(np.array(batch_loss).mean())
