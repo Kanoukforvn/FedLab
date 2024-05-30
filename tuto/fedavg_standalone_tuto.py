@@ -8,6 +8,8 @@ logging.basicConfig(level=logging.INFO,
                         stream=sys.stdout)
 
 import torchvision
+import copy
+from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix
 
 # configuration
 from munch import Munch
@@ -81,6 +83,7 @@ args.epochs = 5
 args.batch_size = 16
 args.lr = 0.0003
 
+#trainer = FedMDCSSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
 trainer = SGDSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
 #trainer = SGDClientTrainer(model, cuda=True) # single trainer
 
@@ -94,15 +97,16 @@ from fedlab.contrib.algorithm.fedmdcs import FedMDCSServerHandler
 # global configuration
 args.com_round = 100
 args.sample_ratio = 0.5
-args.top_n_clients = args.sample_ratio*args.total_client 
+args.top_n_clients = int(args.sample_ratio * args.total_client)
 
-handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client, 
-                            )#top_n_clients=args.top_n_clients)
+#handler = FedMDCSServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client, 
+#                            top_n_clients=args.top_n_clients)
+handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from fedlab.utils.functional import evaluate
+from fedlab.utils.functional import evaluate, globaltest
 from fedlab.core.standalone import StandalonePipeline
 
 from torch import nn
@@ -133,22 +137,31 @@ class EvalPipeline(StandalonePipeline):
             for pack in uploads:
                 self.handler.load(pack)
 
-            loss, acc, bacc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            print("Round {}, Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(t, loss, acc, bacc))
-            
+            loss = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
+
+            pred = globaltest(copy.deepcopy(self.handler.model).to(
+                args.device), test_data, args)
+            acc = accuracy_score(fed_mnist.targets_test, pred)
+            bacc = balanced_accuracy_score(fed_mnist.targets_test, pred)
+
+            logging.info("Round:{}Loss {:.4f}, Balanced Accuracy {:.4f}".format(t,loss, acc, bacc))
+
             if bacc > self.best_balanced_accuracy:
+                self.best_round_number = t
                 self.best_balanced_accuracy = bacc
                 logging.info(f'Best balanced accuracy: {self.best_balanced_accuracy:.4f}')
 
             if acc > self.best_performance:
                 self.best_performance = acc
-                logging.info(f'Best accuracy: {self.best_performance:.4f}')
-
-            t+=1
+            
             self.loss.append(loss)
             self.acc.append(acc)
             self.bacc.append(bacc)
-    
+            t += 1
+        
+        logging.info('Final best balanced accuracy: {:.4f}, Best model number : {} '.format(self.best_balanced_accuracy, self.best_round_number))
+        logging.info(self.bacc)
+            
     def show(self):
         plt.figure(figsize=(8,4.5))
         ax = plt.subplot(1,2,1)
@@ -161,7 +174,21 @@ class EvalPipeline(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuarcy")
         
-        plt.savefig(f"./imgs/{args.dataname}_dir_alpha_{args.alpha}_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/fedavg_{args.dataname}_dir_alpha_{args.alpha}_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
+
+    def show_b(self):
+        plt.figure(figsize=(8,4.5))
+        ax = plt.subplot(1,2,1)
+        ax.plot(np.arange(len(self.loss)), self.loss)
+        ax.set_xlabel("Communication Round")
+        ax.set_ylabel("Loss")
+        
+        ax2 = plt.subplot(1,2,2)
+        ax2.plot(np.arange(len(self.bacc)), self.bacc)
+        ax2.set_xlabel("Communication Round")
+        ax2.set_ylabel("Balanced Accuarcy")
+        
+        plt.savefig(f"./imgs/fedavg_{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy.png", dpi=400, bbox_inches = 'tight')
    
         
 test_data = torchvision.datasets.MNIST(root="../datasets/mnist/",
@@ -172,3 +199,4 @@ test_loader = DataLoader(test_data, batch_size=1024)
 standalone_eval = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
 standalone_eval.main()
 standalone_eval.show()
+standalone_eval.show_b()

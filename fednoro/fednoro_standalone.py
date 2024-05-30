@@ -200,7 +200,7 @@ trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, 
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
-from fedlab.utils.functional import evaluate
+from fedlab.utils.functional import evaluate, globaltest
 from fedlab.core.standalone import StandalonePipeline
 
 handler = FedAvgServerHandler(model=model, global_round=args.warm_up_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
@@ -247,8 +247,14 @@ class EvalPipelineS1(StandalonePipeline):
             for pack in uploads:
                 self.handler.load(pack)
 
-            loss, acc, bacc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            logging.info("Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
+            loss = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
+
+            pred = globaltest(copy.deepcopy(self.handler.model).to(
+                args.device), test_data, args)
+            acc = accuracy_score(fed_cifar10.targets_test, pred)
+            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
+
+            logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
 
             if bacc > self.best_balanced_accuracy:
                 self.best_balanced_accuracy = bacc
@@ -260,17 +266,15 @@ class EvalPipelineS1(StandalonePipeline):
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
 
-
             if acc > self.best_performance:
                 self.best_performance = acc
-                logging.info(f'Best accuracy: {self.best_performance:.4f}')
-
+            
             self.loss.append(loss)
             self.acc.append(acc)
             self.bacc.append(bacc)
             t += 1
         
-        logging.info('Final best accuracy: {:.4f}, Best model number : {} '.format(self.best_performance, self.best_round_number))
+        logging.info('Final best balanced accuracy: {:.4f}, Best model number : {} '.format(self.best_balanced_accuracy, self.best_round_number))
 
     def show(self):
         plt.figure(figsize=(8, 4.5))
@@ -286,11 +290,11 @@ class EvalPipelineS1(StandalonePipeline):
 
         plt.savefig(f"./imgs/cifar10_dir_loss_accuracy_s1.png", dpi=400, bbox_inches = 'tight')
         
-        
 
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=False,
-                                       transform=transforms.ToTensor())
+                                       transform=transforms.ToTensor())        
+
 
 test_loader = DataLoader(test_data, batch_size=32)
 
@@ -365,15 +369,125 @@ clean_clients = list(set(user_id) - set(noisy_clients))
 logging.info(f"selected clean clients: {clean_clients}")
 
 ############################################
+#          Fedavg Stage 2 - Training          #
+############################################
+
+trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
+trainer.setup_dataset(fed_cifar10)
+trainer.setup_optim(args.epochs, args.batch_size, args.lr)
+
+handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
+
+class EvalPipelineS2Alt(StandalonePipeline):
+    def __init__(self, handler, trainer, test_loader):
+        super().__init__(handler, trainer)
+        self.test_loader = test_loader
+        self.loss = []
+        self.acc = []
+        self.bacc = []
+        self.best_performance = 0
+        self.best_balanced_accuracy = 0
+
+    def main(self):
+        t = 0
+        while self.handler.if_stop is False:
+            logging.info("Round {}".format(t+1))
+
+            # Server side
+            sampled_clients = self.handler.sample_clients()
+            broadcast = self.handler.downlink_package
+            
+            # Client side
+            self.trainer.local_process_s1(broadcast, sampled_clients)
+            uploads = self.trainer.uplink_package
+
+
+            # Server side
+            for pack in uploads:
+                self.handler.load(pack)
+
+            loss = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
+
+            pred = globaltest(copy.deepcopy(self.handler.model).to(
+                args.device), test_data, args)
+            acc = accuracy_score(fed_cifar10.targets_test, pred)
+            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
+
+            logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
+
+            if bacc > self.best_balanced_accuracy:
+                self.best_balanced_accuracy = bacc
+                logging.info(f'Best balanced accuracy: {self.best_balanced_accuracy:.4f}')
+
+                # Save model state_dict
+                model_path = f'model/stage1_model_{t}.pth'
+                self.best_round_number = t
+                torch.save(self.handler.model.state_dict(), model_path)
+                # logging.info(f'Saved model state_dict to: {model_path}')
+
+            if acc > self.best_performance:
+                self.best_performance = acc
+            
+            self.loss.append(loss)
+            self.acc.append(acc)
+            self.bacc.append(bacc)
+            t += 1
+        
+        logging.info('Final best balanced accuracy: {:.4f}, Best model number : {} '.format(self.best_balanced_accuracy, self.best_round_number))
+
+    def show(self):
+        plt.figure(figsize=(8, 4.5))
+        ax = plt.subplot(1, 2, 1)
+        ax.plot(np.arange(len(self.loss)), self.loss)
+        ax.set_xlabel("Communication Round")
+        ax.set_ylabel("Loss")
+        
+        ax2 = plt.subplot(1, 2, 2)
+        ax2.plot(np.arange(len(self.acc)), self.acc)
+        ax2.set_xlabel("Communication Round")
+        ax2.set_ylabel("Accuracy")
+
+        plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
+        
+    def show_b(self):
+        plt.figure(figsize=(8,4.5))
+        ax = plt.subplot(1,2,1)
+        ax.plot(np.arange(len(self.loss)), self.loss)
+        ax.set_xlabel("Communication Round")
+        ax.set_ylabel("Loss")
+        
+        ax2 = plt.subplot(1,2,2)
+        ax2.plot(np.arange(len(self.bacc)), self.bacc)
+        ax2.set_xlabel("Communication Round")
+        ax2.set_ylabel("Balanced Accuarcy")
+        
+        plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
+     
+        
+test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
+                                       train=False,
+                                       transform=transforms.ToTensor())
+
+test_loader = DataLoader(test_data, batch_size=32)
+
+# Run evaluation
+eval_pipeline_s2alt = EvalPipelineS2Alt(handler=handler, trainer=trainer, test_loader=test_loader)
+eval_pipeline_s2alt.main()
+eval_pipeline_s2alt.show()
+eval_pipeline_s2alt.show_b()    
+
+
+############################################
 #    Stage 2 - Noise-Robust Training       #
 ############################################
 
 
-trainer = FedNoRoSerialClientTrainer(model, args.total_client, cuda=args.cuda, base_lr=args.lr)
+trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
 handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)
+#handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
 
 class EvalPipelineS2(StandalonePipeline):
     def __init__(self, args, handler, trainer, test_loader, clean_clients, noisy_clients):
@@ -418,31 +532,35 @@ class EvalPipelineS2(StandalonePipeline):
             for pack in uploads:
                 self.handler.load(pack, self.clean_clients, self.noisy_clients)
 
-            loss, acc, bacc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            logging.info("Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
-            
-            if acc > self.best_performance:
-                self.best_performance = acc
-                logging.info(f'Best accuracy: {self.best_performance:.4f}')
+            loss = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
 
+            pred = globaltest(copy.deepcopy(self.handler.model).to(
+                args.device), test_data, args)
+            acc = accuracy_score(fed_cifar10.targets_test, pred)
+            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
 
-            # Update best balanced accuracy
+            logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
+
             if bacc > self.best_balanced_accuracy:
                 self.best_balanced_accuracy = bacc
                 logging.info(f'Best balanced accuracy: {self.best_balanced_accuracy:.4f}')
+
                 # Save model state_dict
-                model_path = f'model/stage2_model_{t}.pth'
+                model_path = f'model/stage1_model_{t}.pth'
                 self.best_round_number = t
                 torch.save(self.handler.model.state_dict(), model_path)
                 # logging.info(f'Saved model state_dict to: {model_path}')
 
-
+            if acc > self.best_performance:
+                self.best_performance = acc
+            
             self.loss.append(loss)
             self.acc.append(acc)
             self.bacc.append(bacc)
             t += 1
         
-        logging.info('Final best accuracy: {:.4f}, Best balanced accuracy {:.4f}, Best model number : {} '.format(self.best_performance, self.best_balanced_accuracy, self.best_round_number))
+        logging.info('Final best balanced accuracy: {:.4f}, Best model number : {} '.format(self.best_balanced_accuracy, self.best_round_number))
+        logging.info(self.bacc)
 
     def show(self):
         plt.figure(figsize=(8, 4.5))
@@ -456,7 +574,7 @@ class EvalPipelineS2(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuracy")
 
-        plt.savefig(f"./imgs/cifar10_dir_loss_accuracy_s2_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/s2_{args.dataname}_dir_alpha_{args.alpha}_loss_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
     
     def show_b(self):
         plt.figure(figsize=(8,4.5))
@@ -470,10 +588,13 @@ class EvalPipelineS2(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Balanced Accuarcy")
         
-        plt.savefig(f"./imgs/{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy.png", dpi=400, bbox_inches = 'tight')
-           
+        plt.savefig(f"./imgs/s2_{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
+
+"""        
 # Run evaluation
 eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, noisy_clients=noisy_clients, clean_clients=clean_clients, test_loader=test_loader, args=args)
 eval_pipeline_s2.main()
 eval_pipeline_s2.show()
 eval_pipeline_s2.show_b()
+"""
+

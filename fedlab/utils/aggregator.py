@@ -17,6 +17,7 @@ from torch.multiprocessing import Pool
 import torch.multiprocessing as mp
 from multiprocessing import get_context
 import numpy as np
+import logging
 
 class Aggregators(object):
     """Define the algorithm of parameters aggregation"""
@@ -118,6 +119,8 @@ class Aggregators(object):
         # Aggregate the selected clients' models using FedAvg
         selected_models = [client_models[idx] for idx in selected_clients_indices]
         selected_weights = [1.0 / top_n_clients] * top_n_clients  # Uniform weights for simplicity
+        
+        logging.info(len(selected_models))
 
         aggregated_model = Aggregators.fedavg_aggregate(selected_models, selected_weights)
 

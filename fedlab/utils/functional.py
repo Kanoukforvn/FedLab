@@ -19,6 +19,7 @@ import json
 import pynvml
 import random
 import numpy as np
+from torch.utils.data import DataLoader
 
 
 def setup_seed(seed):
@@ -85,10 +86,11 @@ def evaluate(model, criterion, test_loader):
                                   for i in range(outputs.size(1))]
             balanced_acc_.update(sum(class_balanced_acc) / len(class_balanced_acc), batch_size)
 
-    return loss_.avg, acc_.avg, balanced_acc_.avg
+    return loss_.avg
 
-def globaltest(model, test_loader, args):
-    
+def globaltest(model, test_dataset, args):
+    model.eval()
+    test_loader = DataLoader(dataset=test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
     pred = np.array([])
     with torch.no_grad():
         for images, labels in test_loader:

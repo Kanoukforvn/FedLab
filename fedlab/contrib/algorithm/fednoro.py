@@ -18,6 +18,7 @@ from collections import Counter
 
 from typing import List
 import numpy as np
+import torch.nn.functional as F
 
 ##################
 #
@@ -184,6 +185,49 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
         
         return [SerializationTool.serialize_model(self._model), avg_epoch_loss]
 
+
+    def train_fednoro(self, model_parameters, train_loader, weight_kd):
+        def gaussian_ramp_up(epoch, total_epochs, lambda_max=0.8):
+            return lambda_max * np.exp(-5 * (1 - (epoch / total_epochs))**2)
+
+        self.set_model(model_parameters.cuda(self.device))
+
+        self.student_net = self._model
+        self.teacher_net = self._model
+
+        self.student_net.train()
+        self.teacher_net.eval()
+
+        optimizer = torch.optim.SGD(self._model.parameters(), lr=self.lr, momentum=0.5)
+
+        for epoch in range(self.epochs):
+            epoch_loss = []
+            lambda_kd = gaussian_ramp_up(epoch, self.epochs)
+
+            for images, labels in train_loader:
+                images, labels = images.to(self.device), labels.to(self.device)
+
+                optimizer.zero_grad()
+                logits = self._model(images)
+
+                with torch.no_grad():
+                    teacher_logits = self.teacher_net(images)
+                    soft_labels = F.softmax(teacher_logits / 0.8, dim=1)
+
+                loss_kl = F.kl_div(F.log_softmax(logits / 0.8, dim=1), soft_labels, reduction='batchmean')
+                loss_ce = F.cross_entropy(logits, labels)
+                loss = lambda_kd * loss_kl + (1 - lambda_kd) * loss_ce
+                loss = loss.float()
+                loss.backward()
+
+                optimizer.step()
+                epoch_loss.append(loss.item())
+
+            epoch_mean_loss = np.mean(epoch_loss)
+
+        return SerializationTool.serialize_model(self._model), epoch_mean_loss    
+
+    """
     def train_fednoro(self, model_parameters, train_loader, weight_kd):
 
         self.set_model(model_parameters.cuda(self.device))
@@ -227,3 +271,4 @@ class FedNoRoSerialClientTrainer(SGDSerialClientTrainer):
             
 
         return SerializationTool.serialize_model(self._model), np.array(epoch_loss).mean()
+"""
