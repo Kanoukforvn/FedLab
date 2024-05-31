@@ -320,6 +320,7 @@ logging.info(
 model.load_state_dict(torch.load(model_path))
 
 from sklearn.mixture import GaussianMixture
+from sklearn.decomposition import PCA
 
 train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                           train=True,
@@ -351,7 +352,6 @@ for j in range(metrics.shape[1]):
 logging.info("metrics:")
 logging.info(metrics)
 
-# Voting mechanism to identify the most consistent noisy clients
 vote = []
 for i in range(9):
     gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics)
@@ -367,7 +367,11 @@ for i in vote:
 
 noisy_clients = list(vote[cnt.index(max(cnt))])
 
-# Plotting the noisy and clean clusters
+# Dimensionality reduction using PCA
+pca = PCA(n_components=2)
+reduced_metrics = pca.fit_transform(metrics)
+
+# Plotting the noisy and clean clusters in the reduced 2D space
 plt.figure(figsize=(10, 8))
 
 # Create a boolean array indicating noisy clients
@@ -375,25 +379,70 @@ is_noisy = np.zeros(metrics.shape[0], dtype=bool)
 is_noisy[noisy_clients] = True
 
 # Plot noisy clients
-plt.scatter(metrics[is_noisy, 0], metrics[is_noisy, 1], color='red', label='Noisy Clients', alpha=0.6)
+plt.scatter(reduced_metrics[is_noisy, 0], reduced_metrics[is_noisy, 1], color='red', label='Noisy Clients', alpha=0.6)
 
 # Plot clean clients
-plt.scatter(metrics[~is_noisy, 0], metrics[~is_noisy, 1], color='blue', label='Clean Clients', alpha=0.6)
+plt.scatter(reduced_metrics[~is_noisy, 0], reduced_metrics[~is_noisy, 1], color='blue', label='Clean Clients', alpha=0.6)
 
 # Add client numbers
-for i in range(metrics.shape[0]):
-    plt.text(metrics[i, 0], metrics[i, 1], str(i), fontsize=8, ha='right')
+for i in range(reduced_metrics.shape[0]):
+    plt.text(reduced_metrics[i, 0], reduced_metrics[i, 1], str(i), fontsize=8, ha='right')
 
-plt.title('Visualization of Noisy and Clean Clusters')
-plt.xlabel('Feature 1')
-plt.ylabel('Feature 2')
+plt.title('Visualization of Noisy and Clean Clusters in Reduced 2D Space')
+plt.xlabel('Principal Component 1')
+plt.ylabel('Principal Component 2')
 plt.legend()
-plt.savefig('./imgs/noisy_clean_clusters.png')
+plt.savefig('./imgs/noisy_clean_clusters_pca.png')
 plt.show()
 
+# Calculate the centroid of the clean clients' cluster
+clean_metrics = metrics[~is_noisy]
+clean_centroid = np.mean(clean_metrics, axis=0)
+
+# Calculate distances of noisy clients from the clean centroid
+noisy_distances = {}
+for client in noisy_clients:
+    distance = np.linalg.norm(metrics[client] - clean_centroid)
+    noisy_distances[client] = distance
+
+# Sort noisy clients by distance
+sorted_noisy_clients = sorted(noisy_distances, key=noisy_distances.get, reverse=True)
+logging.info(f"Ranking of noisy clients by distance: {sorted_noisy_clients}")
+
+# Plotting the distances of noisy clients from the clean centroid
+plt.figure(figsize=(10, 8))
+plt.bar(range(len(sorted_noisy_clients)), [noisy_distances[client] for client in sorted_noisy_clients], color='red')
+plt.xticks(range(len(sorted_noisy_clients)), sorted_noisy_clients)
+plt.xlabel('Client ID')
+plt.ylabel('Distance from Clean Cluster Centroid')
+plt.title('Ranking of Noisy Clients by Distance from Clean Cluster Centroid')
+plt.savefig('./imgs/noisy_clients_ranking.png')
+plt.show()
+
+logging.info(f"selected noisy clients: {noisy_clients}, real noisy clients: {np.where(gamma_s > 0)[0]}")
+clean_clients = list(set(user_id) - set(noisy_clients))
+logging.info(f"selected clean clients: {clean_clients}")
 logging.info(f"selected noisy clients: {noisy_clients}, real noisy clients: {np.where(gamma_s>0.)[0]}")
 clean_clients = list(set(user_id) - set(noisy_clients))
 logging.info(f"selected clean clients: {clean_clients}")
+
+# Perform PCA to reduce to 2 dimensions
+pca = PCA(n_components=2)
+reduced_metrics = pca.fit_transform(metrics)
+
+# Plotting the noisy and clean clusters in the reduced 2D space
+plt.figure(figsize=(10, 8))
+
+# Create a boolean array indicating noisy clients
+is_noisy = np.zeros(metrics.shape[0], dtype=bool)
+is_noisy[noisy_clients] = True
+
+plt.title('Visualization of Noisy and Clean Clusters in Reduced 2D Space')
+plt.xlabel('Principal Component 1')
+plt.ylabel('Principal Component 2')
+plt.legend()
+plt.savefig('./imgs/noisy_clean_clusters_pca.png')
+plt.show()
 
 # Calculate the centroid of the clean clients' cluster
 clean_metrics = metrics[~is_noisy]
