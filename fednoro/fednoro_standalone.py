@@ -35,7 +35,7 @@ args.n_type = "random"
 args.epochs = 5
 args.batch_size = 16
 args.lr = 0.0003
-args.warm_up_round = 19
+args.warm_up_round = 2
 args.sample_ratio = 1
 args.begin = 10
 args.end = 49
@@ -322,11 +322,10 @@ model.load_state_dict(torch.load(model_path))
 from sklearn.mixture import GaussianMixture
 
 train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
-                                       train=True,
-                                       transform=transforms.ToTensor())
+                                          train=True,
+                                          transform=transforms.ToTensor())
 
 train_loader = DataLoader(train_data, batch_size=32)
-
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
 
@@ -352,14 +351,16 @@ for j in range(metrics.shape[1]):
 logging.info("metrics:")
 logging.info(metrics)
 
+# Voting mechanism to identify the most consistent noisy clients
 vote = []
 for i in range(9):
-    gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics) #n_component classement niveau de bruit
+    gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics)
     gmm_pred = gmm.predict(metrics)
     noisy_clients = np.where(gmm_pred == np.argmax(gmm.means_.sum(1)))[0]
     noisy_clients = set(list(noisy_clients))
     logging.info(f'noisy client random_state {i} : {noisy_clients}')
     vote.append(noisy_clients)
+
 cnt = []
 for i in vote:
     cnt.append(vote.count(i))
@@ -388,6 +389,34 @@ plt.xlabel('Feature 1')
 plt.ylabel('Feature 2')
 plt.legend()
 plt.savefig('./imgs/noisy_clean_clusters.png')
+plt.show()
+
+logging.info(f"selected noisy clients: {noisy_clients}, real noisy clients: {np.where(gamma_s>0.)[0]}")
+clean_clients = list(set(user_id) - set(noisy_clients))
+logging.info(f"selected clean clients: {clean_clients}")
+
+# Calculate the centroid of the clean clients' cluster
+clean_metrics = metrics[~is_noisy]
+clean_centroid = np.mean(clean_metrics, axis=0)
+
+# Calculate distances of noisy clients from the clean centroid
+noisy_distances = {}
+for client in noisy_clients:
+    distance = np.linalg.norm(metrics[client] - clean_centroid)
+    noisy_distances[client] = distance
+
+# Sort noisy clients by distance
+sorted_noisy_clients = sorted(noisy_distances, key=noisy_distances.get, reverse=True)
+logging.info(f"Ranking of noisy clients by distance: {sorted_noisy_clients}")
+
+# Plotting the distances of noisy clients from the clean centroid
+plt.figure(figsize=(10, 8))
+plt.bar(range(len(sorted_noisy_clients)), [noisy_distances[client] for client in sorted_noisy_clients], color='red')
+plt.xticks(range(len(sorted_noisy_clients)), sorted_noisy_clients)
+plt.xlabel('Client ID')
+plt.ylabel('Distance from Clean Cluster Centroid')
+plt.title('Ranking of Noisy Clients by Distance from Clean Cluster Centroid')
+plt.savefig('./imgs/noisy_clients_ranking.png')
 plt.show()
 
 logging.info(f"selected noisy clients: {noisy_clients}, real noisy clients: {np.where(gamma_s>0.)[0]}")
