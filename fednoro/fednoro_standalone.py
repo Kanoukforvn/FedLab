@@ -35,7 +35,7 @@ args.n_type = "random"
 args.epochs = 5
 args.batch_size = 16
 args.lr = 0.0003
-args.warm_up_round = 10
+args.warm_up_round = 19
 args.sample_ratio = 1
 args.begin = 10
 args.end = 49
@@ -352,15 +352,6 @@ for j in range(metrics.shape[1]):
 logging.info("metrics:")
 logging.info(metrics)
 
-plt.figure(figsize=(10, 8))
-plt.imshow(metrics, aspect='auto', cmap='viridis')
-plt.colorbar()
-plt.title('Metrics Heatmap')
-plt.xlabel('Class Index')
-plt.ylabel('Client Index')
-plt.savefig('./imgs/metrics_heatmap.png')
-plt.show()
-
 vote = []
 for i in range(9):
     gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics) #n_component classement niveau de bruit
@@ -372,7 +363,28 @@ for i in range(9):
 cnt = []
 for i in vote:
     cnt.append(vote.count(i))
+
 noisy_clients = list(vote[cnt.index(max(cnt))])
+
+# Plotting the noisy and clean clusters
+plt.figure(figsize=(10, 8))
+
+# Create a boolean array indicating noisy clients
+is_noisy = np.zeros(metrics.shape[0], dtype=bool)
+is_noisy[noisy_clients] = True
+
+# Plot noisy clients
+plt.scatter(metrics[is_noisy, 0], metrics[is_noisy, 1], color='red', label='Noisy Clients', alpha=0.6)
+
+# Plot clean clients
+plt.scatter(metrics[~is_noisy, 0], metrics[~is_noisy, 1], color='blue', label='Clean Clients', alpha=0.6)
+
+plt.title('Visualization of Noisy and Clean Clusters')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.legend()
+plt.savefig('./imgs/noisy_clean_clusters.png')
+plt.show()
 
 logging.info(f"selected noisy clients: {noisy_clients}, real noisy clients: {np.where(gamma_s>0.)[0]}")
 clean_clients = list(set(user_id) - set(noisy_clients))
