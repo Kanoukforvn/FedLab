@@ -28,6 +28,7 @@ args.preprocess = True
 args.cuda = True
 args.dataname = "mnist"
 args.num_classes = 10
+args.device = "cuda"
 
 # We provide a example usage of patitioned MNIST dataset
 # Download raw MNIST dataset and partition them according to given configuration
@@ -83,8 +84,8 @@ args.epochs = 5
 args.batch_size = 16
 args.lr = 0.0003
 
-#trainer = FedMDCSSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
-trainer = SGDSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
+trainer = FedMDCSSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
+#trainer = SGDSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
 #trainer = SGDClientTrainer(model, cuda=True) # single trainer
 
 trainer.setup_dataset(fed_mnist)
@@ -99,9 +100,9 @@ args.com_round = 100
 args.sample_ratio = 0.5
 args.top_n_clients = int(args.sample_ratio * args.total_client)
 
-#handler = FedMDCSServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client, 
-#                            top_n_clients=args.top_n_clients)
-handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)
+handler = FedMDCSServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client, 
+                            top_n_clients=args.top_n_clients)
+#handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -141,10 +142,10 @@ class EvalPipeline(StandalonePipeline):
 
             pred = globaltest(copy.deepcopy(self.handler.model).to(
                 args.device), test_data, args)
-            acc = accuracy_score(fed_mnist.targets_test, pred)
-            bacc = balanced_accuracy_score(fed_mnist.targets_test, pred)
+            acc = accuracy_score(test_data.targets, pred)
+            bacc = balanced_accuracy_score(test_data.targets, pred)
 
-            logging.info("Round:{}Loss {:.4f}, Balanced Accuracy {:.4f}".format(t,loss, acc, bacc))
+            logging.info("Round : {}, Loss {:.4f}, Balanced Accuracy {:.4f}".format(t,loss, bacc))
 
             if bacc > self.best_balanced_accuracy:
                 self.best_round_number = t
@@ -174,7 +175,7 @@ class EvalPipeline(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuarcy")
         
-        plt.savefig(f"./imgs/fedavg_{args.dataname}_dir_alpha_{args.alpha}_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/mdcs{args.dataname}_dir_alpha_{args.alpha}_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
 
     def show_b(self):
         plt.figure(figsize=(8,4.5))
@@ -188,7 +189,7 @@ class EvalPipeline(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Balanced Accuarcy")
         
-        plt.savefig(f"./imgs/fedavg_{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/mdcs_{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy.png", dpi=400, bbox_inches = 'tight')
    
         
 test_data = torchvision.datasets.MNIST(root="../datasets/mnist/",

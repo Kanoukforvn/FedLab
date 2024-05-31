@@ -35,7 +35,7 @@ args.n_type = "random"
 args.epochs = 5
 args.batch_size = 16
 args.lr = 0.0003
-args.warm_up_round = 19
+args.warm_up_round = 10
 args.sample_ratio = 1
 args.begin = 10
 args.end = 49
@@ -254,7 +254,7 @@ class EvalPipelineS1(StandalonePipeline):
             acc = accuracy_score(fed_cifar10.targets_test, pred)
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
 
-            logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
+            logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
 
             if bacc > self.best_balanced_accuracy:
                 self.best_balanced_accuracy = bacc
@@ -288,7 +288,7 @@ class EvalPipelineS1(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuracy")
 
-        plt.savefig(f"./imgs/cifar10_dir_loss_accuracy_s1.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/s1_{args.dataname}_loss_balanced_accuracy.png", dpi=400, bbox_inches = 'tight')
         
 
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
@@ -352,12 +352,22 @@ for j in range(metrics.shape[1]):
 logging.info("metrics:")
 logging.info(metrics)
 
+plt.figure(figsize=(10, 8))
+plt.imshow(metrics, aspect='auto', cmap='viridis')
+plt.colorbar()
+plt.title('Metrics Heatmap')
+plt.xlabel('Class Index')
+plt.ylabel('Client Index')
+plt.savefig('./imgs/metrics_heatmap.png')
+plt.show()
+
 vote = []
 for i in range(9):
     gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics) #n_component classement niveau de bruit
     gmm_pred = gmm.predict(metrics)
     noisy_clients = np.where(gmm_pred == np.argmax(gmm.means_.sum(1)))[0]
     noisy_clients = set(list(noisy_clients))
+    logging.info(f'noisy client random_state {i} : {noisy_clients}')
     vote.append(noisy_clients)
 cnt = []
 for i in vote:
@@ -369,14 +379,16 @@ clean_clients = list(set(user_id) - set(noisy_clients))
 logging.info(f"selected clean clients: {clean_clients}")
 
 ############################################
-#          Fedavg Stage 2 - Training          #
+#        Stage 2 - Training Fedavg         #
 ############################################
 
+"""
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
 handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
+"""        
 
 class EvalPipelineS2Alt(StandalonePipeline):
     def __init__(self, handler, trainer, test_loader):
@@ -413,7 +425,7 @@ class EvalPipelineS2Alt(StandalonePipeline):
             acc = accuracy_score(fed_cifar10.targets_test, pred)
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
 
-            logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
+            logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
 
             if bacc > self.best_balanced_accuracy:
                 self.best_balanced_accuracy = bacc
@@ -447,7 +459,7 @@ class EvalPipelineS2Alt(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuracy")
 
-        plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
         
     def show_b(self):
         plt.figure(figsize=(8,4.5))
@@ -461,7 +473,7 @@ class EvalPipelineS2Alt(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Balanced Accuarcy")
         
-        plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
      
         
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
@@ -470,11 +482,13 @@ test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
 
 test_loader = DataLoader(test_data, batch_size=32)
 
+"""        
 # Run evaluation
 eval_pipeline_s2alt = EvalPipelineS2Alt(handler=handler, trainer=trainer, test_loader=test_loader)
 eval_pipeline_s2alt.main()
 eval_pipeline_s2alt.show()
 eval_pipeline_s2alt.show_b()    
+"""        
 
 
 ############################################
@@ -539,7 +553,7 @@ class EvalPipelineS2(StandalonePipeline):
             acc = accuracy_score(fed_cifar10.targets_test, pred)
             bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
 
-            logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, acc, bacc))
+            logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
 
             if bacc > self.best_balanced_accuracy:
                 self.best_balanced_accuracy = bacc
@@ -574,7 +588,7 @@ class EvalPipelineS2(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuracy")
 
-        plt.savefig(f"./imgs/s2_{args.dataname}_dir_alpha_{args.alpha}_loss_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/s2_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
     
     def show_b(self):
         plt.figure(figsize=(8,4.5))
@@ -588,13 +602,12 @@ class EvalPipelineS2(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Balanced Accuarcy")
         
-        plt.savefig(f"./imgs/s2_{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/s2_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
 
-"""        
 # Run evaluation
 eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, noisy_clients=noisy_clients, clean_clients=clean_clients, test_loader=test_loader, args=args)
 eval_pipeline_s2.main()
 eval_pipeline_s2.show()
 eval_pipeline_s2.show_b()
-"""
+
 
