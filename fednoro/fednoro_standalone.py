@@ -379,6 +379,10 @@ plt.scatter(metrics[is_noisy, 0], metrics[is_noisy, 1], color='red', label='Nois
 # Plot clean clients
 plt.scatter(metrics[~is_noisy, 0], metrics[~is_noisy, 1], color='blue', label='Clean Clients', alpha=0.6)
 
+# Add client numbers
+for i in range(metrics.shape[0]):
+    plt.text(metrics[i, 0], metrics[i, 1], str(i), fontsize=8, ha='right')
+
 plt.title('Visualization of Noisy and Clean Clusters')
 plt.xlabel('Feature 1')
 plt.ylabel('Feature 2')
