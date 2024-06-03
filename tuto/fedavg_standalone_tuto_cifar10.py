@@ -95,6 +95,7 @@ args.lr = 0.0003
 
 trainer = SGDSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
 #trainer = SGDClientTrainer(model, cuda=True) # single trainer
+#trainer = FedMDCSSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
 
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
@@ -105,10 +106,12 @@ from fedlab.contrib.algorithm.fedmdcs import FedMDCSServerHandler
 
 # global configuration
 args.com_round = 100
-args.sample_ratio = 0.5
-args.top_n_clients = args.sample_ratio*args.total_client 
+args.sample_ratio = 1
+args.top_n_clients = (args.sample_ratio/2)*args.total_client 
 
 handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client, top_n_clients=args.top_n_clients, device=args.device)
+#handler = FedMDCSServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client, 
+#                            top_n_clients=args.top_n_clients)
 
 import matplotlib.pyplot as plt
 import numpy as np

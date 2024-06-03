@@ -35,7 +35,7 @@ args.n_type = "random"
 args.epochs = 5
 args.batch_size = 16
 args.lr = 0.0003
-args.warm_up_round = 2
+args.warm_up_round = 10
 args.sample_ratio = 1
 args.begin = 10
 args.end = 49
@@ -364,7 +364,7 @@ logging.info(metrics)
 
 # Voting mechanism to identify the most consistent noisy clients
 vote = []
-for i in range(9):
+for i in range(5):
     gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics)
     gmm_pred = gmm.predict(metrics)
     noisy_clients = np.where(gmm_pred == np.argmax(gmm.means_.sum(1)))[0]
@@ -405,6 +405,21 @@ noisy_clients = set(list(noisy_clients))
 pca = PCA(n_components=2)
 reduced_metrics = pca.fit_transform(metrics_scaled)
 """
+plt.figure(figsize=(10, 8))
+
+is_noisy = np.zeros(metrics.shape[0], dtype=bool)
+is_noisy[list(noisy_clients)] = True
+
+plt.scatter(metrics[is_noisy, 0], metrics[is_noisy, 1], color='red', label='Noisy Clients', alpha=0.6)
+plt.scatter(metrics[~is_noisy, 0], metrics[~is_noisy, 1], color='blue', label='Clean Clients', alpha=0.6)
+
+for i in range(metrics.shape[0]):
+    plt.text(metrics[i, 0], metrics[i, 1], str(i), fontsize=8, ha='right')
+
+plt.title('Visualization of Noisy and Clean Clusters')
+plt.legend()
+plt.savefig('./imgs/noisy_clean_clusters_class_0_1.png')
+plt.show()
 
 pca = PCA(n_components=2)
 reduced_metrics = pca.fit_transform(metrics)

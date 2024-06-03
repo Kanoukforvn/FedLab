@@ -116,6 +116,8 @@ class Aggregators(object):
         # Select the top N clients
         selected_clients_indices = [client[0] for client in ranked_clients[:top_n_clients]]
         
+        logging.info(f"selected client : {len(selected_clients_indices)}, {selected_clients_indices}")
+
         # Aggregate the selected clients' models using FedAvg
         selected_models = [client_models[idx] for idx in selected_clients_indices]
         selected_weights = [1.0 / top_n_clients] * top_n_clients  # Uniform weights for simplicity
