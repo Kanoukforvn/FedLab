@@ -28,8 +28,8 @@ args.num_users = args.total_client
 #args.device = "cuda" if torch.cuda.is_available() else "cpu"
 args.device = "cuda"
 args.cuda = True
-args.level_n_lowerb = 0.5
-args.level_n_upperb = 0.7
+args.level_n_lowerb = 0.3
+args.level_n_upperb = 0.5
 args.level_n_system = 0.4
 args.n_type = "random"
 args.epochs = 5
@@ -48,7 +48,7 @@ args.warm = 1
 if args.dataname == "cifar10":
     args.n_classes = 10
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler(f'log_dataset_{args.dataname}_noise_lvl_{args.level_n_system}_num_client_{args.total_client}')])
+#logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler(f'log_dataset_{args.dataname}_noise_lvl_{args.level_n_system}_num_client_{args.total_client}')])
 
 logging.basicConfig(level=logging.INFO,
                         format='[%(asctime)s.%(msecs)03d] %(message)s', 
@@ -321,10 +321,20 @@ model.load_state_dict(torch.load(model_path))
 
 from sklearn.mixture import GaussianMixture
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
+
+train_transform = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])],
+    )
 
 train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                           train=True,
-                                          transform=transforms.ToTensor())
+                                          transform=train_transform)
 
 train_loader = DataLoader(train_data, batch_size=32)
 criterion = nn.CrossEntropyLoss(reduction='none')
@@ -368,24 +378,45 @@ for i in vote:
 
 noisy_clients = list(vote[cnt.index(max(cnt))])
 
-# Dimensionality reduction using PCA
+"""
+# Normalize the features
+scaler = StandardScaler()
+metrics_scaled = scaler.fit_transform(metrics)
+
+# Hyperparameter tuning using GridSearchCV
+gmm_params = {
+    'n_components': [2, 3, 4],
+    'covariance_type': ['full', 'tied', 'diag', 'spherical'],
+    'reg_covar': [1e-6, 1e-5, 1e-4],
+    'n_init': [5, 10, 20]
+}
+
+gmm = GaussianMixture(random_state=42)
+grid_search = GridSearchCV(gmm, gmm_params, cv=3)
+grid_search.fit(metrics_scaled)
+best_gmm = grid_search.best_estimator_
+
+# Fit the best GMM model
+gmm_pred = best_gmm.predict(metrics_scaled)
+noisy_clients = np.where(gmm_pred == np.argmax(best_gmm.means_.sum(1)))[0]
+noisy_clients = set(list(noisy_clients))
+
+# Plotting the noisy and clean clusters in the reduced 2D space
+pca = PCA(n_components=2)
+reduced_metrics = pca.fit_transform(metrics_scaled)
+"""
+
 pca = PCA(n_components=2)
 reduced_metrics = pca.fit_transform(metrics)
 
-# Plotting the noisy and clean clusters in the reduced 2D space
 plt.figure(figsize=(10, 8))
 
-# Create a boolean array indicating noisy clients
 is_noisy = np.zeros(metrics.shape[0], dtype=bool)
-is_noisy[noisy_clients] = True
+is_noisy[list(noisy_clients)] = True
 
-# Plot noisy clients
 plt.scatter(reduced_metrics[is_noisy, 0], reduced_metrics[is_noisy, 1], color='red', label='Noisy Clients', alpha=0.6)
-
-# Plot clean clients
 plt.scatter(reduced_metrics[~is_noisy, 0], reduced_metrics[~is_noisy, 1], color='blue', label='Clean Clients', alpha=0.6)
 
-# Add client numbers
 for i in range(reduced_metrics.shape[0]):
     plt.text(reduced_metrics[i, 0], reduced_metrics[i, 1], str(i), fontsize=8, ha='right')
 
@@ -404,11 +435,9 @@ for client in noisy_clients:
     distance = np.linalg.norm(metrics[client] - clean_centroid)
     noisy_distances[client] = distance
 
-# Sort noisy clients by distance
 sorted_noisy_clients = sorted(noisy_distances, key=noisy_distances.get, reverse=True)
 logging.info(f"Ranking of noisy clients by distance: {sorted_noisy_clients}")
 
-# Plotting the distances of noisy clients from the clean centroid
 plt.figure(figsize=(10, 8))
 plt.bar(range(len(sorted_noisy_clients)), [noisy_distances[client] for client in sorted_noisy_clients], color='red')
 plt.xticks(range(len(sorted_noisy_clients)), sorted_noisy_clients)
