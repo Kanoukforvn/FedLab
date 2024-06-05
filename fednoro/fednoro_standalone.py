@@ -404,9 +404,6 @@ reduced_metrics = pca.fit_transform(metrics)
 
 plt.figure(figsize=(10, 8))
 
-is_noisy = np.zeros(metrics.shape[0], dtype=bool)
-is_noisy[list(noisy_clients)] = True
-
 plt.scatter(reduced_metrics[is_noisy, 0], reduced_metrics[is_noisy, 1], color='red', label='Noisy Clients', alpha=0.6)
 plt.scatter(reduced_metrics[~is_noisy, 0], reduced_metrics[~is_noisy, 1], color='blue', label='Clean Clients', alpha=0.6)
 
@@ -428,9 +425,15 @@ for client in noisy_clients:
     distance = np.linalg.norm(metrics[client] - clean_centroid)
     noisy_distances[client] = distance
 
+# Sort the noisy clients by distance
 sorted_noisy_clients = sorted(noisy_distances, key=noisy_distances.get, reverse=True)
-logging.info(f"Ranking of noisy clients by distance: {sorted_noisy_clients}")
 
+# Print the ranking of noisy clients by distance
+logging.info("Ranking of noisy clients by distance from the clean cluster centroid:")
+for rank, client in enumerate(sorted_noisy_clients, 1):
+    logging.info(f"Rank {rank}: Client {client}, Distance: {noisy_distances[client]:.4f}")
+
+# Plotting the ranking of noisy clients by distance
 plt.figure(figsize=(10, 8))
 plt.bar(range(len(sorted_noisy_clients)), [noisy_distances[client] for client in sorted_noisy_clients], color='red')
 plt.xticks(range(len(sorted_noisy_clients)), sorted_noisy_clients)
