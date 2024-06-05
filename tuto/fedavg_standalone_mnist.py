@@ -17,12 +17,11 @@ import matplotlib.pyplot as plt
 from fedlab.models.mlp import MLP
 from fedlab.utils.dataset.functional import partition_report
 
-
 model = MLP(784, 10)
 args = Munch
 
 args.total_client = 20
-args.alpha = 2
+args.alpha = 0.1
 args.seed = 0
 args.preprocess = True
 args.cuda = True
@@ -195,7 +194,7 @@ class EvalPipeline(StandalonePipeline):
 test_data = torchvision.datasets.MNIST(root="../datasets/mnist/",
                                        train=False,
                                        transform=transforms.ToTensor())
-test_loader = DataLoader(test_data, batch_size=1024)
+test_loader = DataLoader(test_data, batch_size=32)
 
 standalone_eval = EvalPipeline(handler=handler, trainer=trainer, test_loader=test_loader)
 standalone_eval.main()

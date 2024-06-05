@@ -19,7 +19,7 @@ args = Munch
 
 args.total_client = 20
 args.alpha = 2
-args.seed = 0
+args.seed = 100
 args.preprocess = True
 args.dataname = "cifar10"
 args.model = "Resnet18"
@@ -28,14 +28,14 @@ args.num_users = args.total_client
 #args.device = "cuda" if torch.cuda.is_available() else "cpu"
 args.device = "cuda"
 args.cuda = True
-args.level_n_lowerb = 0.3
-args.level_n_upperb = 0.5
+args.level_n_lowerb = 0.5
+args.level_n_upperb = 0.7
 args.level_n_system = 0.4
 args.n_type = "random"
 args.epochs = 5
 args.batch_size = 16
 args.lr = 0.0003
-args.warm_up_round = 10
+args.warm_up_round = 15
 args.sample_ratio = 1
 args.begin = 10
 args.end = 49
@@ -81,6 +81,20 @@ from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
 ############################################
 #           Set up the dataset             #
 ############################################
+train_transform = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])],
+    )
+
+val_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])],
+    )
+
 fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   path="../datasets/cifar10/fedcifar10/",
                                   dataname=args.dataname,
@@ -93,7 +107,7 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   preprocess=args.preprocess,
                                   download=True,
                                   verbose=True,
-                                  transform=transforms.ToTensor())
+                                  transform=train_transform)
 
 # Get the dataset for the 0-th client
 dataset_train = fed_cifar10.get_dataset(0, type="train")
@@ -111,6 +125,10 @@ logging.info(
 ############################################
 #                  Dataset                 #
 ############################################
+
+from torch import nn
+from torch.utils.data import DataLoader
+import torchvision
 
 # generate partition report
 csv_file = "./partition-reports/cifar10_hetero_dir_0.3_10clients.csv"
@@ -147,6 +165,9 @@ fig = feddata_scatterplot(fed_cifar10.targets_train,
                           title=title)
 fig.savefig(f'./imgs/feddata-scatterplot-vis.png') 
 
+train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
+                                          train=True,
+                                          transform=train_transform)
 
 ############################################
 #            Noise Generation              #
@@ -156,6 +177,11 @@ fig.savefig(f'./imgs/feddata-scatterplot-vis.png')
 y_train = np.array(fed_cifar10.targets_train)
 y_train_noisy, gamma_s, real_noise_level = add_noise(args, y_train, fed_cifar10.data_indices_train)
 fed_cifar10.targets_train = y_train_noisy
+
+# Noise Generation Bis
+y_train = np.array(train_data.targets)
+y_train_noisy, gamma_s, real_noise_level = add_noise(args, y_train, fed_cifar10.data_indices_train)
+train_data.targets = y_train_noisy
 
 # generate partition report
 csv_file = "./partition-reports/cifar10_dir_aft_noise_0.3_10clients.csv"
@@ -207,9 +233,6 @@ handler = FedAvgServerHandler(model=model, global_round=args.warm_up_round, samp
 
 from fedlab.core.standalone import StandalonePipeline
 
-from torch import nn
-from torch.utils.data import DataLoader
-import torchvision
 
 ############################################
 #      Stage 1-1 - Evaluation Pipeline       #
@@ -242,7 +265,6 @@ class EvalPipelineS1(StandalonePipeline):
             self.trainer.local_process_s1(broadcast, sampled_clients)
             uploads = self.trainer.uplink_package
 
-
             # Server side
             for pack in uploads:
                 self.handler.load(pack)
@@ -251,10 +273,12 @@ class EvalPipelineS1(StandalonePipeline):
 
             pred = globaltest(copy.deepcopy(self.handler.model).to(
                 args.device), test_data, args)
-            acc = accuracy_score(fed_cifar10.targets_test, pred)
-            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
+            acc = accuracy_score(test_data.targets, pred)
+            bacc = balanced_accuracy_score(test_data.targets, pred)
+            cm = confusion_matrix(test_data.targets, pred)
 
             logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
+            logging.info(cm)
 
             if bacc > self.best_balanced_accuracy:
                 self.best_balanced_accuracy = bacc
@@ -293,7 +317,7 @@ class EvalPipelineS1(StandalonePipeline):
 
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=False,
-                                       transform=transforms.ToTensor())        
+                                       transform=val_transform)        
 
 
 test_loader = DataLoader(test_data, batch_size=32)
@@ -324,19 +348,8 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV
 
-train_transform = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225])],
-    )
+train_loader = DataLoader(train_data, batch_size=32, shuffle=False, num_workers=4)
 
-train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
-                                          train=True,
-                                          transform=train_transform)
-
-train_loader = DataLoader(train_data, batch_size=32)
 criterion = nn.CrossEntropyLoss(reduction='none')
 local_output, loss = get_output(train_loader, model.to(args.device), args, False, criterion)
 
@@ -349,7 +362,7 @@ np.set_printoptions(precision=2)
 for id in range(args.total_client):
     idxs = fed_cifar10.data_indices_train[id]
     for idx in idxs:
-        c = fed_cifar10.targets_train[idx]
+        c = train_data.targets[idx]
         num[id, c] += 1
         metrics[id, c] += loss[idx]
 metrics = metrics / num
@@ -364,7 +377,7 @@ logging.info(metrics)
 
 # Voting mechanism to identify the most consistent noisy clients
 vote = []
-for i in range(5):
+for i in range(9):
     gmm = GaussianMixture(n_components=2, random_state=i).fit(metrics)
     gmm_pred = gmm.predict(metrics)
     noisy_clients = np.where(gmm_pred == np.argmax(gmm.means_.sum(1)))[0]
@@ -378,48 +391,13 @@ for i in vote:
 
 noisy_clients = list(vote[cnt.index(max(cnt))])
 
-"""
-# Normalize the features
-scaler = StandardScaler()
-metrics_scaled = scaler.fit_transform(metrics)
-
-# Hyperparameter tuning using GridSearchCV
-gmm_params = {
-    'n_components': [2, 3, 4],
-    'covariance_type': ['full', 'tied', 'diag', 'spherical'],
-    'reg_covar': [1e-6, 1e-5, 1e-4],
-    'n_init': [5, 10, 20]
-}
-
-gmm = GaussianMixture(random_state=42)
-grid_search = GridSearchCV(gmm, gmm_params, cv=3)
-grid_search.fit(metrics_scaled)
-best_gmm = grid_search.best_estimator_
-
-# Fit the best GMM model
-gmm_pred = best_gmm.predict(metrics_scaled)
-noisy_clients = np.where(gmm_pred == np.argmax(best_gmm.means_.sum(1)))[0]
-noisy_clients = set(list(noisy_clients))
-
-# Plotting the noisy and clean clusters in the reduced 2D space
-pca = PCA(n_components=2)
-reduced_metrics = pca.fit_transform(metrics_scaled)
-"""
 plt.figure(figsize=(10, 8))
 
 is_noisy = np.zeros(metrics.shape[0], dtype=bool)
 is_noisy[list(noisy_clients)] = True
 
-plt.scatter(metrics[is_noisy, 0], metrics[is_noisy, 1], color='red', label='Noisy Clients', alpha=0.6)
-plt.scatter(metrics[~is_noisy, 0], metrics[~is_noisy, 1], color='blue', label='Clean Clients', alpha=0.6)
-
 for i in range(metrics.shape[0]):
     plt.text(metrics[i, 0], metrics[i, 1], str(i), fontsize=8, ha='right')
-
-plt.title('Visualization of Noisy and Clean Clusters')
-plt.legend()
-plt.savefig('./imgs/noisy_clean_clusters_class_0_1.png')
-plt.show()
 
 pca = PCA(n_components=2)
 reduced_metrics = pca.fit_transform(metrics)
@@ -501,7 +479,6 @@ class EvalPipelineS2Alt(StandalonePipeline):
             self.trainer.local_process_s1(broadcast, sampled_clients)
             uploads = self.trainer.uplink_package
 
-
             # Server side
             for pack in uploads:
                 self.handler.load(pack)
@@ -510,11 +487,13 @@ class EvalPipelineS2Alt(StandalonePipeline):
 
             pred = globaltest(copy.deepcopy(self.handler.model).to(
                 args.device), test_data, args)
-            acc = accuracy_score(fed_cifar10.targets_test, pred)
-            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
+            acc = accuracy_score(test_data.targets, pred)
+            bacc = balanced_accuracy_score(test_data.targets, pred)
+            cm = confusion_matrix(test_data.targets, pred)
 
             logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
-
+            logging.info(cm)
+            
             if bacc > self.best_balanced_accuracy:
                 self.best_balanced_accuracy = bacc
                 logging.info(f'Best balanced accuracy: {self.best_balanced_accuracy:.4f}')
@@ -564,12 +543,6 @@ class EvalPipelineS2Alt(StandalonePipeline):
         plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
      
         
-test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
-                                       train=False,
-                                       transform=transforms.ToTensor())
-
-test_loader = DataLoader(test_data, batch_size=32)
-
 """        
 # Run evaluation
 eval_pipeline_s2alt = EvalPipelineS2Alt(handler=handler, trainer=trainer, test_loader=test_loader)
@@ -638,11 +611,12 @@ class EvalPipelineS2(StandalonePipeline):
 
             pred = globaltest(copy.deepcopy(self.handler.model).to(
                 args.device), test_data, args)
-            acc = accuracy_score(fed_cifar10.targets_test, pred)
-            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
+            acc = accuracy_score(test_data.targets, pred)
+            bacc = balanced_accuracy_score(test_data.targets, pred)
+            cm = confusion_matrix(test_data.targets, pred)
 
             logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
-
+            logging.info(cm)
             if bacc > self.best_balanced_accuracy:
                 self.best_balanced_accuracy = bacc
                 logging.info(f'Best balanced accuracy: {self.best_balanced_accuracy:.4f}')

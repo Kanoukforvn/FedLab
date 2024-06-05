@@ -34,10 +34,10 @@ class FedMDCSServerHandler(SyncServerHandler):
         parameters_list = [ele[0] for ele in buffer]
         weights = [ele[1] for ele in buffer]
         
-        # Call FedMDCSAgg with top_n_clients parameter
-        serialized_parameters = Aggregators.FedMDCSAgg(parameters_list, self.model_parameters, self.top_n_clients)
-        SerializationTool.deserialize_model(self._model, serialized_parameters)
-
+        # Call FedMDCSAgg with a percentile-based threshold
+        aggregated_parameters_tensor = Aggregators.FedMDCSAgg(parameters_list, self.model_parameters, percentile=75)
+        SerializationTool.deserialize_model(self._model, aggregated_parameters_tensor)
+        
 ##################
 #
 #      Client
