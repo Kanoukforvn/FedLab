@@ -14,41 +14,10 @@ import torch.backends.cudnn as cudnn
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix
 
 from munch import Munch
-
-args = Munch
-
-args.total_client = 20
-args.alpha = 2
-args.seed = 100
-args.preprocess = True
-args.dataname = "cifar10"
-args.model = "Resnet18"
-args.pretrained = 1
-args.num_users = args.total_client
-#args.device = "cuda" if torch.cuda.is_available() else "cpu"
-args.device = "cuda"
-args.cuda = True
-args.level_n_lowerb = 0.5
-args.level_n_upperb = 0.7
-args.level_n_system = 0.4
-args.n_type = "random"
-args.epochs = 5
-args.batch_size = 16
-args.lr = 0.0003
-args.warm_up_round = 15
-args.sample_ratio = 1
-args.begin = 10
-args.end = 49
-args.a = 0.8 
-args.exp = "Fed"       
-args.com_round = 100-args.warm_up_round
-#args.deterministic = 1
-args.warm = 1
-
-if args.dataname == "cifar10":
-    args.n_classes = 10
+from config import args
 
 #logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler(f'log_dataset_{args.dataname}_noise_lvl_{args.level_n_system}_num_client_{args.total_client}')])
+args.com_round = args.max_round - args.warm_up_round
 
 logging.basicConfig(level=logging.INFO,
                         format='[%(asctime)s.%(msecs)03d] %(message)s', 
@@ -68,7 +37,7 @@ from fedlab.models.build_model import build_model
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA_KD, DaAggregator
 from fedlab.utils.fednoro_utils import add_noise, set_seed, get_output, get_current_consistency_weight, set_output_files
-from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler, FedAvgServerHandler
+from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler, FedAvgServerHandler, FedAvgServerHandlerS2
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
 # We provide a example usage of patitioned CIFAR10 dataset
@@ -81,6 +50,7 @@ from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
 ############################################
 #           Set up the dataset             #
 ############################################
+
 train_transform = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
@@ -107,7 +77,7 @@ fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   preprocess=args.preprocess,
                                   download=True,
                                   verbose=True,
-                                  transform=train_transform)
+                                  transform=transforms.ToTensor())
 
 # Get the dataset for the 0-th client
 dataset_train = fed_cifar10.get_dataset(0, type="train")
@@ -167,7 +137,7 @@ fig.savefig(f'./imgs/feddata-scatterplot-vis.png')
 
 train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                           train=True,
-                                          transform=train_transform)
+                                          transform=transforms.ToTensor())
 
 ############################################
 #            Noise Generation              #
@@ -273,9 +243,9 @@ class EvalPipelineS1(StandalonePipeline):
 
             pred = globaltest(copy.deepcopy(self.handler.model).to(
                 args.device), test_data, args)
-            acc = accuracy_score(test_data.targets, pred)
-            bacc = balanced_accuracy_score(test_data.targets, pred)
-            cm = confusion_matrix(test_data.targets, pred)
+            acc = accuracy_score(fed_cifar10.targets_test, pred)
+            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
+            cm = confusion_matrix(fed_cifar10.targets_test, pred)
 
             logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
             logging.info(cm)
@@ -317,7 +287,7 @@ class EvalPipelineS1(StandalonePipeline):
 
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=False,
-                                       transform=val_transform)        
+                                       transform=transforms.ToTensor())        
 
 
 test_loader = DataLoader(test_data, batch_size=32)
@@ -345,8 +315,7 @@ model.load_state_dict(torch.load(model_path))
 
 from sklearn.mixture import GaussianMixture
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import GridSearchCV
+from scipy.stats import wasserstein_distance
 
 train_loader = DataLoader(train_data, batch_size=32, shuffle=False, num_workers=4)
 
@@ -382,7 +351,6 @@ for i in range(9):
     gmm_pred = gmm.predict(metrics)
     noisy_clients = np.where(gmm_pred == np.argmax(gmm.means_.sum(1)))[0]
     noisy_clients = set(list(noisy_clients))
-    logging.info(f'noisy client random_state {i} : {noisy_clients}')
     vote.append(noisy_clients)
 
 cnt = []
@@ -419,11 +387,18 @@ plt.show()
 clean_metrics = metrics[~is_noisy]
 clean_centroid = np.mean(clean_metrics, axis=0)
 
-# Calculate distances of noisy clients from the clean centroid
+# Calculate EMD distances of noisy clients from the clean centroid
 noisy_distances = {}
 for client in noisy_clients:
-    distance = np.linalg.norm(metrics[client] - clean_centroid)
+    distance = wasserstein_distance(metrics[client], clean_centroid)
     noisy_distances[client] = distance
+
+# Calculate the median distance
+distances = np.array(list(noisy_distances.values()))
+median_distance = np.median(distances)
+
+# Select noisy clients whose distances are above the median
+selected_noisy_clients = [client for client, distance in noisy_distances.items() if distance > 0]#< median_distance]
 
 # Sort the noisy clients by distance
 sorted_noisy_clients = sorted(noisy_distances, key=noisy_distances.get, reverse=True)
@@ -443,7 +418,8 @@ plt.title('Ranking of Noisy Clients by Distance from Clean Cluster Centroid')
 plt.savefig('./imgs/noisy_clients_ranking.png')
 plt.show()
 
-logging.info(f"selected noisy clients: {noisy_clients}, real noisy clients: {np.where(gamma_s > 0)[0]}")
+logging.info(f"predicted noisy clients: {noisy_clients}, real noisy clients: {np.where(gamma_s > 0)[0]}")
+logging.info(f"selected noisy clients below median: {selected_noisy_clients}")
 clean_clients = list(set(user_id) - set(noisy_clients))
 logging.info(f"selected clean clients: {clean_clients}")
 
@@ -451,16 +427,15 @@ logging.info(f"selected clean clients: {clean_clients}")
 #        Stage 2 - Training Fedavg         #
 ############################################
 
-"""
+
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
-handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
-"""        
+handler = FedAvgServerHandlerS2(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
 
 class EvalPipelineS2Alt(StandalonePipeline):
-    def __init__(self, handler, trainer, test_loader):
+    def __init__(self, handler, trainer, test_loader, clean_clients, selected_noisy_clients):
         super().__init__(handler, trainer)
         self.test_loader = test_loader
         self.loss = []
@@ -468,6 +443,9 @@ class EvalPipelineS2Alt(StandalonePipeline):
         self.bacc = []
         self.best_performance = 0
         self.best_balanced_accuracy = 0
+        self.selected_noisy_clients = selected_noisy_clients
+        self.clean_clients = clean_clients
+
 
     def main(self):
         t = 0
@@ -475,11 +453,11 @@ class EvalPipelineS2Alt(StandalonePipeline):
             logging.info("Round {}".format(t+1))
 
             # Server side
-            sampled_clients = self.handler.sample_clients()
+            sampled_clients = self.handler.sample_clients(self.selected_noisy_clients, self.clean_clients,len(self.clean_clients+self.selected_noisy_clients))
             broadcast = self.handler.downlink_package
             
             # Client side
-            self.trainer.local_process_s1(broadcast, sampled_clients)
+            self.trainer.local_process_s2alt(broadcast, sampled_clients)
             uploads = self.trainer.uplink_package
 
             # Server side
@@ -490,9 +468,9 @@ class EvalPipelineS2Alt(StandalonePipeline):
 
             pred = globaltest(copy.deepcopy(self.handler.model).to(
                 args.device), test_data, args)
-            acc = accuracy_score(test_data.targets, pred)
-            bacc = balanced_accuracy_score(test_data.targets, pred)
-            cm = confusion_matrix(test_data.targets, pred)
+            acc = accuracy_score(fed_cifar10.targets_test, pred)
+            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
+            cm = confusion_matrix(fed_cifar10.targets_test, pred)
 
             logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
             logging.info(cm)
@@ -516,6 +494,7 @@ class EvalPipelineS2Alt(StandalonePipeline):
             t += 1
         
         logging.info('Final best balanced accuracy: {:.4f}, Best model number : {} '.format(self.best_balanced_accuracy, self.best_round_number))
+        logging.info(self.bacc)
 
     def show(self):
         plt.figure(figsize=(8, 4.5))
@@ -546,29 +525,29 @@ class EvalPipelineS2Alt(StandalonePipeline):
         plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
      
         
-"""        
+        
 # Run evaluation
-eval_pipeline_s2alt = EvalPipelineS2Alt(handler=handler, trainer=trainer, test_loader=test_loader)
+eval_pipeline_s2alt = EvalPipelineS2Alt(handler=handler, trainer=trainer, test_loader=test_loader, clean_clients=clean_clients, selected_noisy_clients=selected_noisy_clients)
 eval_pipeline_s2alt.main()
 eval_pipeline_s2alt.show()
 eval_pipeline_s2alt.show_b()    
-"""        
+        
 
 
 ############################################
 #    Stage 2 - Noise-Robust Training       #
 ############################################
 
-
+"""
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
 trainer.setup_dataset(fed_cifar10)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
 handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)
 #handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
-
+"""
 class EvalPipelineS2(StandalonePipeline):
-    def __init__(self, args, handler, trainer, test_loader, clean_clients, noisy_clients):
+    def __init__(self, args, handler, trainer, test_loader, clean_clients, selected_noisy_clients):
         super().__init__(handler, trainer)
         self.test_loader = test_loader
         self.loss = []
@@ -579,16 +558,16 @@ class EvalPipelineS2(StandalonePipeline):
         self.begin = args.begin
         self.end = args.end
         self.a = args.a
-        self.noisy_clients = noisy_clients
+        self.selected_noisy_clients = selected_noisy_clients
         self.clean_clients = clean_clients
 
     def main(self):
         t = 0
         while self.handler.if_stop is False:
             logging.info("Round {}".format(t+1))
-
+            logging.info(len(self.clean_clients+self.selected_noisy_clients))
             # Server side
-            sampled_clients = self.handler.sample_clients()
+            sampled_clients = self.handler.sample_clients(self.selected_noisy_clients, self.clean_clients,len(self.clean_clients+self.selected_noisy_clients))
             broadcast = self.handler.downlink_package
 
             logging.info("Training on K={} clients".format(len(sampled_clients)))
@@ -601,22 +580,22 @@ class EvalPipelineS2(StandalonePipeline):
                 begin=self.begin, 
                 end=self.end, 
                 a=self.a, 
-                noisy_clients=self.noisy_clients, 
+                noisy_clients=self.selected_noisy_clients, 
                 clean_clients=self.clean_clients)
             
             uploads = self.trainer.uplink_package
 
             # Server side
             for pack in uploads:
-                self.handler.load(pack, self.clean_clients, self.noisy_clients)
+                self.handler.load(pack, self.clean_clients, self.selected_noisy_clients)
 
             loss = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
 
             pred = globaltest(copy.deepcopy(self.handler.model).to(
                 args.device), test_data, args)
-            acc = accuracy_score(test_data.targets, pred)
-            bacc = balanced_accuracy_score(test_data.targets, pred)
-            cm = confusion_matrix(test_data.targets, pred)
+            acc = accuracy_score(fed_cifar10.targets_test, pred)
+            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
+            cm = confusion_matrix(fed_cifar10.targets_test, pred)
 
             logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
             logging.info(cm)
@@ -669,10 +648,11 @@ class EvalPipelineS2(StandalonePipeline):
         
         plt.savefig(f"./imgs/s2_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
 
+"""
 # Run evaluation
-eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, noisy_clients=noisy_clients, clean_clients=clean_clients, test_loader=test_loader, args=args)
+eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, selected_noisy_clients=selected_noisy_clients, clean_clients=clean_clients, test_loader=test_loader, args=args)
 eval_pipeline_s2.main()
 eval_pipeline_s2.show()
 eval_pipeline_s2.show_b()
-
+"""
 
