@@ -9,15 +9,10 @@ import matplotlib.pyplot as plt
 from collections import Counter
 import numpy as np
 import torch.nn as nn
-import torch.backends.cudnn as cudnn
 
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix
 
-from munch import Munch
 from config import args
-
-#logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler(), logging.FileHandler(f'log_dataset_{args.dataname}_noise_lvl_{args.level_n_system}_num_client_{args.total_client}')])
-args.com_round = args.max_round - args.warm_up_round
 
 logging.basicConfig(level=logging.INFO,
                         format='[%(asctime)s.%(msecs)03d] %(message)s', 
@@ -50,20 +45,6 @@ from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
 ############################################
 #           Set up the dataset             #
 ############################################
-
-train_transform = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225])],
-    )
-
-val_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225])],
-    )
 
 fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
                                   path="../datasets/cifar10/fedcifar10/",
@@ -101,7 +82,7 @@ from torch.utils.data import DataLoader
 import torchvision
 
 # generate partition report
-csv_file = "./partition-reports/cifar10_hetero_dir_0.3_10clients.csv"
+csv_file = f"./partition-reports/{args.dataname}_{args.level_n_system}_{args.total_client}_clients.csv"
 partition_report(fed_cifar10.targets_train, fed_cifar10.data_indices_train, 
                  class_num=args.n_classes, 
                  verbose=False, file=csv_file)
@@ -113,27 +94,6 @@ hetero_dir_part_df = hetero_dir_part_df.set_index('cid')
 col_names = [f"class-{i}" for i in range(args.n_classes)]
 for col in col_names:
     hetero_dir_part_df[col] = (hetero_dir_part_df[col] * hetero_dir_part_df['TotalAmount']).astype(int)
-
-#select first 10 clients for bar plot
-hetero_dir_part_df[col_names].iloc[:5].plot.barh(stacked=True)  
-plt.tight_layout()
-plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-plt.xlabel('sample num')
-plt.savefig(f"./imgs/cifar10_hetero_dir_0.3_10clients.png", dpi=400, bbox_inches = 'tight')
-plt.show()
-
-from matplotlib import pyplot as plt
-from fedlab.utils.dataset.functional import feddata_scatterplot
-
-title = 'Data Distribution over Clients for Each Class'
-fig = feddata_scatterplot(fed_cifar10.targets_train,
-                          fed_cifar10.data_indices_train,
-                          args.total_client,
-                          args.n_classes,
-                          figsize=(6, 4),
-                          max_size=200,
-                          title=title)
-fig.savefig(f'./imgs/feddata-scatterplot-vis.png') 
 
 train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                           train=True,
@@ -154,7 +114,7 @@ y_train_noisy, gamma_s, real_noise_level = add_noise(args, y_train, fed_cifar10.
 train_data.targets = y_train_noisy
 
 # generate partition report
-csv_file = "./partition-reports/cifar10_dir_aft_noise_0.3_10clients.csv"
+csv_file = f"./partition-reports/{args.dataname}_nlvl_{args.level_n_system}_{args.total_client}_clients.csv"
 partition_report(fed_cifar10.targets_train, fed_cifar10.data_indices_train, 
                  class_num=args.n_classes, 
                  verbose=False, file=csv_file)
@@ -168,12 +128,6 @@ for col in col_names:
 
 #select first 10 clients for bar plot
 hetero_dir_part_df[col_names].iloc[:5].plot.barh(stacked=True)  
-plt.tight_layout()
-plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-plt.xlabel('sample num')
-plt.savefig(f"./imgs/cifar10_dir_aft_noise_0.3_10clients.png", dpi=400, bbox_inches = 'tight')
-plt.show()
-
 
 # local train configuration
 
@@ -224,7 +178,7 @@ class EvalPipelineS1(StandalonePipeline):
 
     def main(self):
         t = 0
-        while self.handler.if_stop is False:
+        while not self.handler.if_stop and t < args.warm_up_round:
             logging.info("Round {}".format(t+1))
 
             # Server side
@@ -282,7 +236,7 @@ class EvalPipelineS1(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuracy")
 
-        plt.savefig(f"./imgs/s1_{args.dataname}_loss_balanced_accuracy.png", dpi=400, bbox_inches = 'tight')
+        plt.savefig(f"./imgs/s1_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
         
 
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
@@ -316,6 +270,7 @@ model.load_state_dict(torch.load(model_path))
 from sklearn.mixture import GaussianMixture
 from sklearn.decomposition import PCA
 from scipy.stats import wasserstein_distance
+from sklearn.preprocessing import MinMaxScaler
 
 train_loader = DataLoader(train_data, batch_size=32, shuffle=False, num_workers=4)
 
@@ -380,33 +335,98 @@ for i in range(reduced_metrics.shape[0]):
 
 plt.title('Visualization of Noisy and Clean Clusters in Reduced 2D Space')
 plt.legend()
-plt.savefig('./imgs/noisy_clean_clusters_pca.png')
+plt.savefig(f'./imgs/nlvl_{args.level_n_system}_noisy_clean_clusters_pca.png')
 plt.show()
 
 # Calculate the centroid of the clean clients' cluster
 clean_metrics = metrics[~is_noisy]
 clean_centroid = np.mean(clean_metrics, axis=0)
 
-# Calculate EMD distances of noisy clients from the clean centroid
-noisy_distances = {}
+# Calculate EMD and Euclidian distances of noisy clients from the clean centroid
+euclidean_distances = {}
+emd_distances = {}
 for client in noisy_clients:
-    distance = wasserstein_distance(metrics[client], clean_centroid)
-    noisy_distances[client] = distance
+    euclidean_distance = np.linalg.norm(metrics[client] - clean_centroid)
+    emd_distance = wasserstein_distance(metrics[client], clean_centroid)
+    euclidean_distances[client] = euclidean_distance
+    emd_distances[client] = emd_distance
+
+# Function to scale values to the range of target values
+def scale_to_range(values, target_min, target_max):
+    min_value = np.min(values)
+    max_value = np.max(values)
+    scaled_values = (values - min_value) / (max_value - min_value) * (target_max - target_min) + target_min
+    return scaled_values
+
+# Define the range for scaling based on the real noise levels
+min_noise_level = np.min(real_noise_level[noisy_clients])
+max_noise_level = np.max(real_noise_level[noisy_clients])
+
+# Scale the distances with respect to the real noise level range
+scaled_euclidean_distances = scale_to_range(np.array(list(euclidean_distances.values())), min_noise_level, max_noise_level)
+scaled_emd_distances = scale_to_range(np.array(list(emd_distances.values())), min_noise_level, max_noise_level)
+scaled_real_noise = real_noise_level[noisy_clients]  # No need to scale this as it is already in the desired range
+
+# Create a dictionary for logging purposes
+scaled_distances = {
+    client: (scaled_euclidean_distances[idx], scaled_emd_distances[idx], scaled_real_noise[idx])
+    for idx, client in enumerate(noisy_clients)
+}
+
+# Plot the histogram with superposed distances
+plt.figure(figsize=(10, 8))
+bar_width = 0.25
+indices = np.arange(len(noisy_clients))
+
+plt.bar(indices, scaled_euclidean_distances, bar_width, label='Euclidean Distance', color='b')
+plt.bar(indices + bar_width, scaled_emd_distances, bar_width, label='EMD', color='g')
+plt.bar(indices + 2 * bar_width, scaled_real_noise, bar_width, label='Real Noise Level', color='r')
+
+plt.xlabel('Client Index')
+plt.ylabel('Scaled Value')
+plt.title('Comparison of Distances and Real Noise Level for Noisy Clients')
+plt.xticks(indices + bar_width, noisy_clients)
+plt.legend()
+plt.tight_layout()
+
+plt.savefig(f'./imgs/nlvl_{args.level_n_system}_distances_and_noise_level_scaled.png')
+plt.show()
+
+# Sort the noisy clients by normalized distances and noise ratio
+sorted_clients_by_euclidean = sorted(noisy_clients, key=lambda x: scaled_distances[x][0], reverse=True)
+sorted_clients_by_emd = sorted(noisy_clients, key=lambda x: scaled_distances[x][1], reverse=True)
+sorted_clients_by_noise_ratio = sorted(noisy_clients, key=lambda x: scaled_distances[x][2], reverse=True)
+
+# Change this value for testing different distances
+noisy_distances = emd_distances
 
 # Calculate the median distance
 distances = np.array(list(noisy_distances.values()))
 median_distance = np.median(distances)
 
-# Select noisy clients whose distances are above the median
-selected_noisy_clients = [client for client, distance in noisy_distances.items() if distance > 0]#< median_distance]
+
+if args.noisy_selection == True:
+    # Select noisy clients whose distances are above the median
+    selected_noisy_clients = [client for client, distance in noisy_distances.items() if distance < median_distance]
+else:
+    # Select all noisy client
+    selected_noisy_clients = [client for client, distance in noisy_distances.items() if distance > 0]#< median_distance]
 
 # Sort the noisy clients by distance
 sorted_noisy_clients = sorted(noisy_distances, key=noisy_distances.get, reverse=True)
 
-# Print the ranking of noisy clients by distance
-logging.info("Ranking of noisy clients by distance from the clean cluster centroid:")
-for rank, client in enumerate(sorted_noisy_clients, 1):
-    logging.info(f"Rank {rank}: Client {client}, Distance: {noisy_distances[client]:.4f}")
+# Print the ranking of noisy clients by distance and noise ratio
+logging.info("Ranking of noisy clients by normalized Euclidean distance from the clean cluster centroid:")
+for rank, client in enumerate(sorted_clients_by_euclidean, 1):
+    logging.info(f"Rank {rank}: Client {client}, Normalized Euclidean Distance: {scaled_distances[client][0]:.4f}")
+
+logging.info("Ranking of noisy clients by normalized EMD from the clean cluster centroid:")
+for rank, client in enumerate(sorted_clients_by_emd, 1):
+    logging.info(f"Rank {rank}: Client {client}, Normalized EMD: {scaled_distances[client][1]:.4f}")
+
+logging.info("Ranking of noisy clients by normalized real noise ratio:")
+for rank, client in enumerate(sorted_clients_by_noise_ratio, 1):
+    logging.info(f"Rank {rank}: Client {client}, Normalized Real Noise Ratio: {scaled_distances[client][2]:.4f}")
 
 # Plotting the ranking of noisy clients by distance
 plt.figure(figsize=(10, 8))
@@ -415,7 +435,7 @@ plt.xticks(range(len(sorted_noisy_clients)), sorted_noisy_clients)
 plt.xlabel('Client ID')
 plt.ylabel('Distance from Clean Cluster Centroid')
 plt.title('Ranking of Noisy Clients by Distance from Clean Cluster Centroid')
-plt.savefig('./imgs/noisy_clients_ranking.png')
+plt.savefig(f'./imgs/nlvl_{args.level_n_system}_noisy_clients_ranking.png')
 plt.show()
 
 logging.info(f"predicted noisy clients: {noisy_clients}, real noisy clients: {np.where(gamma_s > 0)[0]}")
@@ -424,15 +444,9 @@ clean_clients = list(set(user_id) - set(noisy_clients))
 logging.info(f"selected clean clients: {clean_clients}")
 
 ############################################
-#        Stage 2 - Training Fedavg         #
+#           Stage 2 - Training             #
 ############################################
 
-
-trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
-trainer.setup_dataset(fed_cifar10)
-trainer.setup_optim(args.epochs, args.batch_size, args.lr)
-
-handler = FedAvgServerHandlerS2(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
 
 class EvalPipelineS2Alt(StandalonePipeline):
     def __init__(self, handler, trainer, test_loader, clean_clients, selected_noisy_clients):
@@ -449,7 +463,8 @@ class EvalPipelineS2Alt(StandalonePipeline):
 
     def main(self):
         t = 0
-        while self.handler.if_stop is False:
+        while not self.handler.if_stop and t < args.com_round:
+            
             logging.info("Round {}".format(t+1))
 
             # Server side
@@ -507,8 +522,10 @@ class EvalPipelineS2Alt(StandalonePipeline):
         ax2.plot(np.arange(len(self.acc)), self.acc)
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuracy")
-
-        plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
+        if args.noisy_selection == True:
+            plt.savefig(f"./imgs/s2_noisy_selection_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
+        else:    
+            plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
         
     def show_b(self):
         plt.figure(figsize=(8,4.5))
@@ -521,31 +538,12 @@ class EvalPipelineS2Alt(StandalonePipeline):
         ax2.plot(np.arange(len(self.bacc)), self.bacc)
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Balanced Accuarcy")
-        
-        plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
-     
-        
-        
-# Run evaluation
-eval_pipeline_s2alt = EvalPipelineS2Alt(handler=handler, trainer=trainer, test_loader=test_loader, clean_clients=clean_clients, selected_noisy_clients=selected_noisy_clients)
-eval_pipeline_s2alt.main()
-eval_pipeline_s2alt.show()
-eval_pipeline_s2alt.show_b()    
-        
+        if args.noisy_selection == True:
+            plt.savefig(f"./imgs/s2_noisy_selection_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
+        else:
+            plt.savefig(f"./imgs/s2_noisy_selection_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
 
-
-############################################
-#    Stage 2 - Noise-Robust Training       #
-############################################
-
-"""
-trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
-trainer.setup_dataset(fed_cifar10)
-trainer.setup_optim(args.epochs, args.batch_size, args.lr)
-
-handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)
-#handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
-"""
+               
 class EvalPipelineS2(StandalonePipeline):
     def __init__(self, args, handler, trainer, test_loader, clean_clients, selected_noisy_clients):
         super().__init__(handler, trainer)
@@ -563,7 +561,7 @@ class EvalPipelineS2(StandalonePipeline):
 
     def main(self):
         t = 0
-        while self.handler.if_stop is False:
+        while not self.handler.if_stop and t < args.com_round:
             logging.info("Round {}".format(t+1))
             logging.info(len(self.clean_clients+self.selected_noisy_clients))
             # Server side
@@ -618,7 +616,7 @@ class EvalPipelineS2(StandalonePipeline):
             t += 1
         
         logging.info('Final best balanced accuracy: {:.4f}, Best model number : {} '.format(self.best_balanced_accuracy, self.best_round_number))
-        logging.info(self.bacc)
+        logging.info(f"Balanced Accuaracy of each rounds : {self.bacc}")
 
     def show(self):
         plt.figure(figsize=(8, 4.5))
@@ -631,9 +629,11 @@ class EvalPipelineS2(StandalonePipeline):
         ax2.plot(np.arange(len(self.acc)), self.acc)
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuracy")
+        if args.noisy_selection == True:
+            plt.savefig(f"./imgs/s2_noisy_selection_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
+        else:
+            plt.savefig(f"./imgs/s2_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
 
-        plt.savefig(f"./imgs/s2_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
-    
     def show_b(self):
         plt.figure(figsize=(8,4.5))
         ax = plt.subplot(1,2,1)
@@ -645,14 +645,41 @@ class EvalPipelineS2(StandalonePipeline):
         ax2.plot(np.arange(len(self.bacc)), self.bacc)
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Balanced Accuarcy")
+        if args.noisy_selection == True:
+            plt.savefig(f"./imgs/s2_noisy_selection_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
+        else:
+            plt.savefig(f"./imgs/s2_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
         
-        plt.savefig(f"./imgs/s2_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
+### Training with distance aware aggregator and logit adjustment ###
+        
+if args.aggregator == 'fedavg':
 
-"""
-# Run evaluation
-eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, selected_noisy_clients=selected_noisy_clients, clean_clients=clean_clients, test_loader=test_loader, args=args)
-eval_pipeline_s2.main()
-eval_pipeline_s2.show()
-eval_pipeline_s2.show_b()
-"""
+    trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
+    trainer.setup_dataset(fed_cifar10)
+    trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
+    handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
+    
+    # Run evaluation
+    eval_pipeline_s2alt = EvalPipelineS2Alt(handler=handler, trainer=trainer, test_loader=test_loader, clean_clients=clean_clients, selected_noisy_clients=selected_noisy_clients)
+    eval_pipeline_s2alt.main()
+    #eval_pipeline_s2alt.show()
+    eval_pipeline_s2alt.show_b()    
+   
+
+### Training with fedavg aggregator and logit adjustment ###
+
+if args.aggregator == 'fednoro':
+    
+    trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
+    trainer.setup_dataset(fed_cifar10)
+    trainer.setup_optim(args.epochs, args.batch_size, args.lr)
+
+    handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)
+
+    # Run evaluation
+    eval_pipeline_s2 = EvalPipelineS2(handler=handler, trainer=trainer, selected_noisy_clients=selected_noisy_clients, clean_clients=clean_clients, test_loader=test_loader, args=args)
+    eval_pipeline_s2.main()
+    #eval_pipeline_s2.show()
+    eval_pipeline_s2.show_b()
+    

@@ -90,66 +90,50 @@ class Aggregators(object):
         divergence = total_divergence.item() / len(global_model)
         return divergence
 
-    """
     @staticmethod
-    def FedMDCSAgg(client_models, global_model, top_n_clients):
+    def FedMDCSAgg(parameters_list, global_model_parameters, past_performances):
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        device = global_model[0].device  # Ensure the global model is on the appropriate device
-
-        # Calculate divergences on the same device as the global model
-        divergences = [Aggregators.calculate_divergence(
-            [tensor.to(device) for tensor in client_model], global_model) for client_model in client_models]
-
-        # Rank clients based on normalized divergence in descending order
-        ranked_clients = sorted(enumerate(divergences), key=lambda x: x[1], reverse=True)
-
-        # Select the top N clients
-        selected_clients_indices = [client[0] for client in ranked_clients[:top_n_clients]]
-        
-        logging.info(f"selected client : {len(selected_clients_indices)}, {selected_clients_indices}")
-
-        # Aggregate the selected clients' models using FedAvg
-        selected_models = [client_models[idx] for idx in selected_clients_indices]
-        selected_weights = [1.0 / top_n_clients] * top_n_clients  # Uniform weights for simplicity
-        
-        logging.info(len(selected_models))
-
-        aggregated_model = Aggregators.fedavg_aggregate(selected_models, selected_weights)
-
-        return aggregated_model
-    """
-
-    @staticmethod
-    def FedMDCSAgg(parameters_list, global_model_parameters, percentile=75):
-        # Convert parameters_list and global_model_parameters to tensors
-        parameters_tensor = torch.stack([torch.tensor(params) for params in parameters_list])
-        global_params_tensor = torch.tensor(global_model_parameters)
+        # Convert parameters_list and global_model_parameters to tensors and move to GPU
+        parameters_tensor = torch.stack([torch.tensor(params).to(device) for params in parameters_list])
+        global_params_tensor = torch.tensor(global_model_parameters).to(device)
         
         # Calculate normalized model divergence for each client
         epsilon = 1e-10
         divergences = torch.mean(torch.abs((parameters_tensor - global_params_tensor) / (global_params_tensor + epsilon)), dim=1)
 
-        # Calculate the percentile-based threshold
-        threshold = torch.quantile(divergences, percentile / 100.0)
+        # Normalize divergences and past_performances
+        norm_divergences = divergences / divergences.max()
+        norm_past_performances = torch.tensor(past_performances).to(device) / max(past_performances)
 
-        # Select clients with divergence above the threshold
-        selected_clients_indices = torch.nonzero(divergences > threshold).squeeze().tolist()
-        if isinstance(selected_clients_indices, int):
-            selected_clients_indices = [selected_clients_indices]
+        # Calculate composite score
+        # Weights can be adjusted based on importance
+        alpha, beta = 0.4, 0.3
+        scores = alpha * norm_divergences + beta * norm_past_performances
+
+        # Determine the median score
+        median_score = scores.median().item()
+
+        #For using median (better)
+        # Select clients with scores above the median
+        #selected_clients_indices = (scores > median_score).nonzero(as_tuple=True)[0].tolist()
+
+        # Sort scores and select top 50%
+        num_clients_to_select = len(scores) // 2
+        _, selected_clients_indices = torch.topk(scores, num_clients_to_select)
 
         # If no clients are selected, use all clients
         if len(selected_clients_indices) == 0:
             selected_clients_indices = list(range(len(parameters_list)))
 
         # Log selected client indices
-        print("Selected client indices:", selected_clients_indices)
+        logging.info(f"Selected client indices:{selected_clients_indices}")
 
-        # Aggregate the selected clients' parameters (Fedavg)
+        # Aggregate the selected clients' parameters
         selected_parameters_tensor = parameters_tensor[selected_clients_indices]
         aggregated_parameters_tensor = torch.mean(selected_parameters_tensor, dim=0)
 
         return aggregated_parameters_tensor
-                
 class DaAggregator:
     @staticmethod
     def DaAgg(parameters_list, clean_clients, noisy_clients):

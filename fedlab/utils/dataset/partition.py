@@ -217,6 +217,7 @@ class BasicPartitioner(DataPartitioner):
         verbose (bool): Whether output intermediate information. Default as ``True``.
         min_require_size (int, optional): Minimum required sample number for each client. If set to ``None``, then equals to ``num_classes``. Only works if ``partition="noniid-labeldir"``.
         seed (int): Random seed. Default as ``None``.
+        noniid_percentage (float, optional): Percentage of clients that should be non-iid. Only works if ``partition="mixed-iid-noniid"``. Default as ``0.5``.
 
     Returns:
         dict: ``{ client_id: indices}``.
@@ -229,7 +230,8 @@ class BasicPartitioner(DataPartitioner):
                  major_classes_num=1,
                  verbose=True,
                  min_require_size=None,
-                 seed=None):
+                 seed=None,
+                 noniid_percentage=0.5):
         self.targets = np.array(targets)  # with shape (num_samples,)
         self.num_samples = self.targets.shape[0]
         self.num_clients = num_clients
@@ -238,8 +240,8 @@ class BasicPartitioner(DataPartitioner):
         self.dir_alpha = dir_alpha
         self.verbose = verbose
         self.min_require_size = min_require_size
+        self.noniid_percentage = noniid_percentage
             
-        # self.rng = np.random.default_rng(seed)  # rng currently not supports randint
         np.random.seed(seed)
 
         if partition == "noniid-#label":
@@ -255,13 +257,16 @@ class BasicPartitioner(DataPartitioner):
             # label-distribution-skew:distributed-based (Dirichlet) and quantity-skew (Dirichlet)
             assert dir_alpha > 0, f"Parameter 'dir_alpha' for Dirichlet distribution should be " \
                                   f"positive."
+        elif partition == "mixed-iid-noniid":
+            # Mixed IID and non-IID
+            assert 0 <= noniid_percentage <= 1, f"'noniid_percentage' should be between 0 and 1."
         elif partition == "iid":
             # IID
             pass
         else:
             raise ValueError(
                 f"tabular data partition only supports 'noniid-#label', 'noniid-labeldir', "
-                f"'unbalance', 'iid'. {partition} is not supported.")
+                f"'unbalance', 'iid', 'mixed-iid-noniid'. {partition} is not supported.")
 
         self.client_dict = self._perform_partition()
         # get sample number count for each client
@@ -287,6 +292,37 @@ class BasicPartitioner(DataPartitioner):
                                                              self.dir_alpha)
             client_dict = F.homo_partition(client_sample_nums, self.num_samples)
 
+        elif self.partition == "mixed-iid-noniid":
+            # Calculate the number of non-IID clients
+            num_noniid_clients = int(self.num_clients * self.noniid_percentage)
+            num_iid_clients = self.num_clients - num_noniid_clients
+    
+            # Calculate the number of samples for non-IID and IID clients
+            num_noniid_samples = int(self.num_samples * self.noniid_percentage)
+            num_iid_samples = self.num_samples - num_noniid_samples
+    
+            # Perform non-IID partition for a subset of clients with proportionate samples
+            noniid_sample_indices = np.random.choice(self.num_samples, num_noniid_samples, replace=False)
+            remaining_indices = np.setdiff1d(np.arange(self.num_samples), noniid_sample_indices)
+    
+            noniid_client_dict = F.hetero_dir_partition(self.targets[noniid_sample_indices], num_noniid_clients, self.num_classes,
+                                                        self.dir_alpha)
+            # Adjust indices to the original targets
+            noniid_client_dict = {cid: noniid_sample_indices[indices] for cid, indices in noniid_client_dict.items()}
+    
+            # Perform IID partition for the remaining clients with proportionate samples
+            client_sample_nums = F.balance_split(num_iid_clients, num_iid_samples)
+            iid_client_dict = F.homo_partition(client_sample_nums, num_iid_samples)
+            # Adjust indices to the original targets
+            iid_client_dict = {cid: remaining_indices[indices] for cid, indices in iid_client_dict.items()}
+    
+            # Combine the two dictionaries
+            client_dict = {}
+            for cid in noniid_client_dict:
+                client_dict[cid] = noniid_client_dict[cid]
+            for i, cid in enumerate(range(num_noniid_clients, self.num_clients)):
+                client_dict[cid] = iid_client_dict[i]
+    
         else:
             # IID
             client_sample_nums = F.balance_split(self.num_clients, self.num_samples)
@@ -299,8 +335,7 @@ class BasicPartitioner(DataPartitioner):
 
     def __len__(self):
         return len(self.client_dict)
-
-
+    
 class VisionPartitioner(BasicPartitioner):
     """Data partitioner for vision data.
 
@@ -336,13 +371,15 @@ class VisionPartitioner(BasicPartitioner):
                  dir_alpha=None,
                  major_classes_num=None,
                  verbose=True,
-                 seed=None):
+                 seed=None,
+                 noniid_percentage=0.5):
         super(VisionPartitioner, self).__init__(targets=targets, num_clients=num_clients,
                                                 partition=partition,
                                                 dir_alpha=dir_alpha,
                                                 major_classes_num=major_classes_num,
                                                 verbose=verbose,
-                                                seed=seed)
+                                                seed=seed,
+                                                noniid_percentage=noniid_percentage)
 
 
 class MNISTPartitioner(VisionPartitioner):

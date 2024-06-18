@@ -14,13 +14,16 @@ from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_m
 # configuration
 from munch import Munch
 import matplotlib.pyplot as plt
-from fedlab.models.mlp import MLP
+from fedlab.models.mlp import MLP, MLR
+from fedlab.models.cnn import CNNMnistPns
 from fedlab.utils.dataset.functional import partition_report
 
-model = MLP(784, 10)
+#model = MLP(784, 10)
+model = MLR(784, 10)
+#model = CNNMnistPns()
 args = Munch
 
-args.total_client = 20
+args.total_client = 10
 args.alpha = 0.1
 args.seed = 0
 args.preprocess = True
@@ -28,6 +31,7 @@ args.cuda = True
 args.dataname = "mnist"
 args.num_classes = 10
 args.device = "cuda"
+args.noniid_percentage = 0.5
 
 # We provide a example usage of patitioned MNIST dataset
 # Download raw MNIST dataset and partition them according to given configuration
@@ -38,18 +42,22 @@ import pandas as pd
 
 trainset = torchvision.datasets.MNIST(root="../../../../data/MNIST/", train=True, download=True)
 
-fed_mnist = PartitionedMNIST(root="../datasets/mnist/",
-                         path="../datasets/mnist/fedmnist/",
-                         num_clients=args.total_client,
-                         partition="noniid-labeldir",
-                         dir_alpha=args.alpha,
-                         seed=args.seed,
-                         preprocess=args.preprocess,
-                         download=True,
-                         verbose=True,
-                         transform=transforms.Compose(
-                             [transforms.ToPILImage(), transforms.ToTensor()]))
-
+fed_mnist = PartitionedMNIST(
+    root="../datasets/mnist/",
+    path="../datasets/mnist/fedmnist/",
+    num_clients=args.total_client,
+    partition="mixed-iid-noniid",
+    dir_alpha=args.alpha,
+    seed=args.seed,
+    preprocess=args.preprocess,
+    download=True,
+    verbose=True,
+    noniid_percentage=args.noniid_percentage, 
+    transform=transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.ToTensor()
+    ])
+)
 dataset = fed_mnist.get_dataset(0) # get the 0-th client's dataset
 dataloader = fed_mnist.get_dataloader(0, batch_size=16) # get the 0-th client's dataset loader with batch size 128
 
@@ -66,12 +74,13 @@ for col in col_names:
     hetero_dir_part_df[col] = (hetero_dir_part_df[col] * hetero_dir_part_df['TotalAmount']).astype(int)
 
 #select first 10 clients for bar plot
-hetero_dir_part_df[col_names].iloc[:5].plot.barh(stacked=True)  
+hetero_dir_part_df[col_names].iloc[:10].plot.barh(stacked=True)  
 plt.tight_layout()
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('sample num')
-plt.savefig(f"./imgs/{args.dataname}_dir_alpha_{args.alpha}_{args.total_client}clients.png", dpi=400, bbox_inches = 'tight')
+plt.savefig(f"./imgs/{args.dataname}_dir_alpha_{args.alpha}_{args.total_client}_clients.png", dpi=400, bbox_inches = 'tight')
 plt.show()
+
 
 
 # client
@@ -81,7 +90,7 @@ from fedlab.contrib.algorithm.fedmdcs import FedMDCSSerialClientTrainer
 # local train configuration
 args.epochs = 5
 args.batch_size = 16
-args.lr = 0.0003
+args.lr = 0.01
 
 trainer = FedMDCSSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
 #trainer = SGDSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
@@ -95,11 +104,11 @@ from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 from fedlab.contrib.algorithm.fedmdcs import FedMDCSServerHandler
 
 # global configuration
-args.com_round = 100
-args.sample_ratio = 1
+args.com_round = 200
+args.sample_ratio = 0.5
 args.top_n_clients = int((args.sample_ratio/2)*args.total_client) 
 
-handler = FedMDCSServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client, 
+handler = FedMDCSServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client, 
                             top_n_clients=args.top_n_clients)
 #handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)
 

@@ -27,19 +27,19 @@ class PartitionedMNIST(FedDataset):
     """:class:`FedDataset` with partitioning preprocess. For detailed partitioning, please
     check `Federated Dataset and DataPartitioner <https://fedlab.readthedocs.io/en/master/tutorials/dataset_partition.html>`_.
 
-    
     Args:
         root (str): Path to download raw dataset.
         path (str): Path to save partitioned subdataset.
         num_clients (int): Number of clients.
         download (bool): Whether to download the raw dataset.
         preprocess (bool): Whether to preprocess the dataset.
-        partition (str, optional): Partition name. Only supports ``"noniid-#label"``, ``"noniid-labeldir"``, ``"unbalance"`` and ``"iid"`` partition schemes.
-        dir_alpha (float, optional): Dirichlet distribution parameter for non-iid partition. Only works if ``partition="dirichlet"``. Default as ``None``.
+        partition (str, optional): Partition name. Only supports ``"noniid-#label"``, ``"noniid-labeldir"``, ``"unbalance"``, ``"iid"`` and ``"mixed-iid-noniid"`` partition schemes.
+        dir_alpha (float, optional): Dirichlet distribution parameter for non-iid partition. Only works if ``partition="noniid-labeldir"``. Default as ``None``.
         verbose (bool, optional): Whether to print partition process. Default as ``True``.
         seed (int, optional): Random seed. Default as ``None``.
-        transform (callable, optional): A function/transform that takes in an PIL image and returns a transformed version.
+        transform (callable, optional): A function/transform that takes in a PIL image and returns a transformed version.
         target_transform (callable, optional): A function/transform that takes in the target and transforms it.
+        noniid_percentage (float, optional): Percentage of clients that should be non-iid. Only works if ``partition="mixed-iid-noniid"``. Default as ``0.5``.
     """
     def __init__(self,
                  root,
@@ -52,13 +52,15 @@ class PartitionedMNIST(FedDataset):
                  verbose=True,
                  seed=None,
                  transform=None,
-                 target_transform=None) -> None:
+                 target_transform=None,
+                 noniid_percentage=0.5) -> None:
 
         self.root = os.path.expanduser(root)
         self.path = path
         self.num_clients = num_clients
         self.transform = transform
-        self.targt_transform = target_transform
+        self.target_transform = target_transform
+        self.noniid_percentage = noniid_percentage
 
         if preprocess:
             self.preprocess(partition=partition,
@@ -67,7 +69,8 @@ class PartitionedMNIST(FedDataset):
                             seed=seed,
                             download=download,
                             transform=transform,
-                            target_transform=target_transform)
+                            target_transform=target_transform,
+                            noniid_percentage=noniid_percentage)
 
     def preprocess(self,
                    partition="iid",
@@ -76,7 +79,8 @@ class PartitionedMNIST(FedDataset):
                    seed=None,
                    download=True,
                    transform=None,
-                   target_transform=None):
+                   target_transform=None,
+                   noniid_percentage=0.5):
         """Perform FL partition on the dataset, and save each subset for each client into ``data{cid}.pkl`` file.
 
         For details of partition schemes, please check `Federated Dataset and DataPartitioner <https://fedlab.readthedocs.io/en/master/tutorials/dataset_partition.html>`_.
@@ -86,21 +90,22 @@ class PartitionedMNIST(FedDataset):
         if os.path.exists(self.path) is not True:
             os.mkdir(self.path)
             os.mkdir(os.path.join(self.path, "train"))
-            os.mkdir(os.path.join(self.path, "var"))
+            os.mkdir(os.path.join(self.path, "val"))
             os.mkdir(os.path.join(self.path, "test"))
 
         trainset = torchvision.datasets.MNIST(root=self.root,
-                                                train=True,
-                                                download=download)
+                                              train=True,
+                                              download=download)
 
         self.targets = trainset.targets  # Store targets as an instance variable
-        
-        partitioner = MNISTPartitioner(trainset.targets,
-                                        self.num_clients,
-                                        partition=partition,
-                                        dir_alpha=dir_alpha,
-                                        verbose=verbose,
-                                        seed=seed)
+
+        partitioner = MNISTPartitioner(targets=self.targets,
+                                       num_clients=self.num_clients,
+                                       partition=partition,
+                                       dir_alpha=dir_alpha,
+                                       verbose=verbose,
+                                       seed=seed,
+                                       noniid_percentage=noniid_percentage)
 
         self.client_dict = partitioner.client_dict  # Store client_dict as an instance variable
 
@@ -132,7 +137,7 @@ class PartitionedMNIST(FedDataset):
         return dataset
 
     def get_dataloader(self, cid, batch_size=None, type="train"):
-        """Return dataload for client with client ID ``cid``.
+        """Return dataloader for client with client ID ``cid``.
 
         Args:
             cid (int): client id

@@ -1,5 +1,6 @@
 
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class MLP_CelebA(nn.Module):
@@ -38,3 +39,15 @@ class MLP(nn.Module):
         x = self.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+    
+class MLR(nn.Module):
+    def __init__(self, dim_in, dim_out):
+        super(MLR, self).__init__()
+        self.linear = nn.Linear(dim_in, dim_out)
+
+    def forward(self, x):
+        x = x.reshape(-1, 784)
+        # out = F.sigmoid(self.linear(xb))
+        out = self.linear(x)
+        return F.log_softmax(out, dim=1)
+    
