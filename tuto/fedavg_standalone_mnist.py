@@ -15,7 +15,7 @@ from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_m
 from munch import Munch
 import matplotlib.pyplot as plt
 from fedlab.models.mlp import MLP, MLR
-from fedlab.models.cnn import CNNMnistPns
+from fedlab.models.cnn import CNNMnistPns, CNNCifarPns
 from fedlab.utils.dataset.functional import partition_report
 
 #model = MLP(784, 10)
@@ -46,13 +46,13 @@ fed_mnist = PartitionedMNIST(
     root="../datasets/mnist/",
     path="../datasets/mnist/fedmnist/",
     num_clients=args.total_client,
-    partition="mixed-iid-noniid",
+    partition="noniid-labeldir",
     dir_alpha=args.alpha,
     seed=args.seed,
     preprocess=args.preprocess,
     download=True,
     verbose=True,
-    noniid_percentage=args.noniid_percentage, 
+    #noniid_percentage=args.noniid_percentage, 
     transform=transforms.Compose([
         transforms.ToPILImage(),
         transforms.ToTensor()

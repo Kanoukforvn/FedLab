@@ -53,7 +53,7 @@ class PartitionedMNIST(FedDataset):
                  seed=None,
                  transform=None,
                  target_transform=None,
-                 noniid_percentage=0.5) -> None:
+                 noniid_percentage=0) -> None:
 
         self.root = os.path.expanduser(root)
         self.path = path

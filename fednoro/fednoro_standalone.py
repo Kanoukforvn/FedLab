@@ -19,6 +19,8 @@ logging.basicConfig(level=logging.INFO,
                         datefmt='%H:%M:%S',
                         stream=sys.stdout)
 
+logging.info(f"{args.noisy_selection}")
+
 #logging.getLogger().addHandler(logging.StreamHandler(sys.stdout)) #useful for kaggle
 
 sys.path.append("../")
@@ -407,10 +409,11 @@ median_distance = np.median(distances)
 
 if args.noisy_selection == True:
     # Select noisy clients whose distances are above the median
+    logging.info("noisy selection")
     selected_noisy_clients = [client for client, distance in noisy_distances.items() if distance < median_distance]
-else:
+if args.noisy_selection == False:
     # Select all noisy client
-    selected_noisy_clients = [client for client, distance in noisy_distances.items() if distance > 0]#< median_distance]
+    selected_noisy_clients = list(noisy_distances.keys())
 
 # Sort the noisy clients by distance
 sorted_noisy_clients = sorted(noisy_distances, key=noisy_distances.get, reverse=True)
@@ -439,7 +442,7 @@ plt.savefig(f'./imgs/nlvl_{args.level_n_system}_noisy_clients_ranking.png')
 plt.show()
 
 logging.info(f"predicted noisy clients: {noisy_clients}, real noisy clients: {np.where(gamma_s > 0)[0]}")
-logging.info(f"selected noisy clients below median: {selected_noisy_clients}")
+logging.info(f"selected noisy clients : {selected_noisy_clients}")
 clean_clients = list(set(user_id) - set(noisy_clients))
 logging.info(f"selected clean clients: {clean_clients}")
 
@@ -524,7 +527,7 @@ class EvalPipelineS2Alt(StandalonePipeline):
         ax2.set_ylabel("Accuracy")
         if args.noisy_selection == True:
             plt.savefig(f"./imgs/s2_noisy_selection_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
-        else:    
+        if args.noisy_selection == False:  
             plt.savefig(f"./imgs/s2_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
         
     def show_b(self):
@@ -540,7 +543,7 @@ class EvalPipelineS2Alt(StandalonePipeline):
         ax2.set_ylabel("Balanced Accuarcy")
         if args.noisy_selection == True:
             plt.savefig(f"./imgs/s2_noisy_selection_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
-        else:
+        if args.noisy_selection == False:
             plt.savefig(f"./imgs/s2_noisy_selection_fedavg_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
 
                
@@ -631,7 +634,7 @@ class EvalPipelineS2(StandalonePipeline):
         ax2.set_ylabel("Accuracy")
         if args.noisy_selection == True:
             plt.savefig(f"./imgs/s2_noisy_selection_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_accuracy_{self.best_performance}.png", dpi=400, bbox_inches = 'tight')
-        else:
+        if args.noisy_selection == False:
             plt.savefig(f"./imgs/s2_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
 
     def show_b(self):
@@ -647,18 +650,20 @@ class EvalPipelineS2(StandalonePipeline):
         ax2.set_ylabel("Balanced Accuarcy")
         if args.noisy_selection == True:
             plt.savefig(f"./imgs/s2_noisy_selection_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
-        else:
+        if args.noisy_selection == False:
             plt.savefig(f"./imgs/s2_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
         
 ### Training with distance aware aggregator and logit adjustment ###
         
 if args.aggregator == 'fedavg':
 
+    logging.info("fedavg")
+
     trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
     trainer.setup_dataset(fed_cifar10)
     trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
-    handler = FedAvgServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
+    handler = FedAvgServerHandlerS2(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
     
     # Run evaluation
     eval_pipeline_s2alt = EvalPipelineS2Alt(handler=handler, trainer=trainer, test_loader=test_loader, clean_clients=clean_clients, selected_noisy_clients=selected_noisy_clients)
@@ -670,6 +675,8 @@ if args.aggregator == 'fedavg':
 ### Training with fedavg aggregator and logit adjustment ###
 
 if args.aggregator == 'fednoro':
+    
+    logging.info("fednoro")
     
     trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
     trainer.setup_dataset(fed_cifar10)

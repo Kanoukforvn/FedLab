@@ -40,9 +40,9 @@ class DataPartitioner(ABC):
     @abstractmethod
     def __len__(self):
         raise NotImplementedError()
-
-
+    
 class CIFAR10Partitioner(DataPartitioner):
+
     """CIFAR10 data partitioner.
 
     Partition CIFAR10 given specific client number. Currently 6 supported partition schemes can be
@@ -185,6 +185,171 @@ class CIFAR10Partitioner(DataPartitioner):
         return len(self.client_dict)
 
 
+#class CIFAR10Partitioner(DataPartitioner):
+#    """CIFAR10 data partitioner.
+#
+#    Partition CIFAR10 given specific client number. Currently 6 supported partition schemes can be
+#    achieved by passing different combination of parameters in initialization:
+#
+#    - ``balance=None``
+#
+#      - ``partition="dirichlet"``: non-iid partition used in
+#        `Bayesian Nonparametric Federated Learning of Neural Networks <https://arxiv.org/abs/1905.12022>`_
+#        and `Federated Learning with Matched Averaging <https://arxiv.org/abs/2002.06440>`_. Refer
+#        to :func:`fedlab.utils.dataset.functional.hetero_dir_partition` for more information.
+#
+#      - ``partition="shards"``: non-iid method used in FedAvg `paper <https://arxiv.org/abs/1602.05629>`_.
+#        Refer to :func:`fedlab.utils.dataset.functional.shards_partition` for more information.
+#
+#
+#    - ``balance=True``: "Balance" refers to FL scenario that sample numbers for different clients
+#      are the same. Refer to :func:`fedlab.utils.dataset.functional.balance_partition` for more
+#      information.
+#
+#      - ``partition="iid"``: Random select samples from complete dataset given sample number for
+#        each client.
+#
+#      - ``partition="dirichlet"``: Refer to :func:`fedlab.utils.dataset.functional.client_inner_dirichlet_partition`
+#        for more information.
+#
+#    - ``balance=False``: "Unbalance" refers to FL scenario that sample numbers for different clients
+#      are different. For unbalance method, sample number for each client is drown from Log-Normal
+#      distribution with variance ``unbalanced_sgm``. When ``unbalanced_sgm=0``, partition is
+#      balanced. Refer to :func:`fedlab.utils.dataset.functional.lognormal_unbalance_partition`
+#      for more information. The method is from paper `Federated Learning Based on Dynamic Regularization <https://openreview.net/forum?id=B7v4QMR6Z9w>`_.
+#
+#      - ``partition="iid"``: Random select samples from complete dataset given sample number for
+#        each client.
+#
+#      - ``partition="dirichlet"``: Refer to :func:`fedlab.utils.dataset.functional.client_inner_dirichlet_partition`
+#        for more information.
+#
+#    For detail usage, please check `Federated Dataset and DataPartitioner <https://fedlab.readthedocs.io/en/master/tutorials/dataset_partition.html>`_.
+#
+#    Args:
+#        targets (list or numpy.ndarray): Targets of dataset for partition. Each element is in range of [0, 1, ..., 9].
+#        num_clients (int): Number of clients for data partition.
+#        balance (bool, optional): Balanced partition over all clients or not. Default as ``True``.
+#        partition (str, optional): Partition type, only ``"iid"``, ``shards``, ``"dirichlet"`` are supported. Default as ``"iid"``.
+#        unbalance_sgm (float, optional): Log-normal distribution variance for unbalanced data partition over clients. Default as ``0`` for balanced partition.
+#        num_shards (int, optional): Number of shards in non-iid ``"shards"`` partition. Only works if ``partition="shards"``. Default as ``None``.
+#        dir_alpha (float, optional): Dirichlet distribution parameter for non-iid partition. Only works if ``partition="dirichlet"``. Default as ``None``.
+#        verbose (bool, optional): Whether to print partition process. Default as ``True``.
+#        min_require_size (int, optional): Minimum required sample number for each client. If set to ``None``, then equals to ``num_classes``. Only works if ``partition="noniid-labeldir"``.
+#        seed (int, optional): Random seed. Default as ``None``.
+#        noniid_percentage (float, optional): Percentage of clients that should be non-iid. Only works if ``partition="mixed-iid-noniid"``. Default as ``0.5``.
+#    """
+#
+#    def __init__(self, targets, num_clients,
+#                 balance=True, partition="iid",
+#                 unbalance_sgm=0,
+#                 num_shards=None,
+#                 dir_alpha=None,
+#                 verbose=True,
+#                 min_require_size=None,
+#                 seed=None,
+#                 noniid_percentage=0.5):
+#
+#        self.targets = np.array(targets)  # with shape (num_samples,)
+#        self.num_samples = self.targets.shape[0]
+#        self.num_clients = num_clients
+#        self.client_dict = dict()
+#        self.partition = partition
+#        self.balance = balance
+#        self.dir_alpha = dir_alpha
+#        self.num_shards = num_shards
+#        self.unbalance_sgm = unbalance_sgm
+#        self.verbose = verbose
+#        self.min_require_size = min_require_size
+#        self.noniid_percentage = noniid_percentage
+#        self.num_classes = 10
+#
+#        np.random.seed(seed)
+#
+#        # partition scheme check
+#        if balance is None:
+#            assert partition in ["dirichlet", "shards"], f"When balance=None, 'partition' only " \
+#                                                         f"accepts 'dirichlet' and 'shards'."
+#        elif isinstance(balance, bool):
+#            assert partition in ["iid", "dirichlet"], f"When balance is bool, 'partition' only " \
+#                                                      f"accepts 'dirichlet' and 'iid'."
+#        else:
+#            raise ValueError(f"'balance' can only be NoneType or bool, not {type(balance)}.")
+#
+#        # perform partition according to setting
+#        self.client_dict = self._perform_partition()
+#        # get sample number count for each client
+#        self.client_sample_count = F.samples_num_count(self.client_dict, self.num_clients)
+#        self.stats_report = F.partition_report(targets, self.client_dict, class_num=self.num_classes, verbose=False)
+#
+#    def _perform_partition(self):
+#        if self.balance is None:
+#            if self.partition == "dirichlet":
+#                client_dict = F.hetero_dir_partition(self.targets,
+#                                                     self.num_clients,
+#                                                     self.num_classes,
+#                                                     self.dir_alpha,
+#                                                     min_require_size=self.min_require_size)
+#
+#            else:  # partition is 'shards'
+#                client_dict = F.shards_partition(self.targets, self.num_clients, self.num_shards)
+#
+#        else:  # if balance is True or False
+#            # perform sample number balance/unbalance partition over all clients
+#            if self.balance is True:
+#                client_sample_nums = F.balance_split(self.num_clients, self.num_samples)
+#            else:
+#                client_sample_nums = F.lognormal_unbalance_split(self.num_clients,
+#                                                                 self.num_samples,
+#                                                                 self.unbalance_sgm)
+#
+#            # perform iid/dirichlet partition for each client
+#            if self.partition == "iid":
+#                client_dict = F.homo_partition(client_sample_nums, self.num_samples)
+#            elif self.partition == "mixed-iid-noniid":
+#                # Calculate the number of non-IID clients
+#                num_noniid_clients = int(self.num_clients * self.noniid_percentage)
+#                num_iid_clients = self.num_clients - num_noniid_clients
+#    
+#                # Calculate the number of samples for non-IID and IID clients
+#                num_noniid_samples = int(self.num_samples * self.noniid_percentage)
+#                num_iid_samples = self.num_samples - num_noniid_samples
+#    
+#                # Perform non-IID partition for a subset of clients with proportionate samples
+#                noniid_sample_indices = np.random.choice(self.num_samples, num_noniid_samples, replace=False)
+#                remaining_indices = np.setdiff1d(np.arange(self.num_samples), noniid_sample_indices)
+#    
+#                noniid_client_dict = F.hetero_dir_partition(self.targets[noniid_sample_indices], num_noniid_clients, self.num_classes,
+#                                                            self.dir_alpha)
+#                # Adjust indices to the original targets
+#                noniid_client_dict = {cid: noniid_sample_indices[indices] for cid, indices in noniid_client_dict.items()}
+#    
+#                # Perform IID partition for the remaining clients with proportionate samples
+#                client_sample_nums = F.balance_split(num_iid_clients, num_iid_samples)
+#                iid_client_dict = F.homo_partition(client_sample_nums, num_iid_samples)
+#                # Adjust indices to the original targets
+#                iid_client_dict = {cid: remaining_indices[indices] for cid, indices in iid_client_dict.items()}
+#    
+#                # Combine the two dictionaries
+#                client_dict = {}
+#                for cid in noniid_client_dict:
+#                    client_dict[cid] = noniid_client_dict[cid]
+#                for i, cid in enumerate(range(num_noniid_clients, self.num_clients)):
+#                    client_dict[cid] = iid_client_dict[i]
+#            else:  # for dirichlet
+#                client_dict = F.client_inner_dirichlet_partition(self.targets, self.num_clients,
+#                                                                 self.num_classes, self.dir_alpha,
+#                                                                 client_sample_nums, self.verbose)
+#
+#        return client_dict
+#
+#    def __getitem__(self, index):
+#        return self.client_dict[index]
+#
+#    def __len__(self):
+#        return len(self.client_dict)
+#
+#
 class CIFAR100Partitioner(CIFAR10Partitioner):
     """CIFAR100 data partitioner.
 

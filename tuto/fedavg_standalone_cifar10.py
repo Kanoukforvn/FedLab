@@ -1,7 +1,24 @@
+import sys
+sys.path.append("../")
+
+import logging
+logging.basicConfig(level=logging.INFO,
+                        format='[%(asctime)s.%(msecs)03d] %(message)s', 
+                        datefmt='%H:%M:%S',
+                        stream=sys.stdout)
+
+import torchvision
+import copy
+from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix
+
 # configuration
 from munch import Munch
 import matplotlib.pyplot as plt
-import torchvision
+from fedlab.models.mlp import MLP, MLR
+from fedlab.models.cnn import CNNMnistPns, CNNCifarPns
+from fedlab.utils.dataset.functional import partition_report
+
+model = CNNCifarPns()
 
 args = Munch
 
@@ -16,52 +33,35 @@ args.model = "Resnet18"
 args.pretrained = 1
 args.device = "cuda"
 args.batch_size = 16
-
-import logging
-import sys
-
-logging.basicConfig(level=logging.INFO,
-                        format='[%(asctime)s.%(msecs)03d] %(message)s', 
-                        datefmt='%H:%M:%S',
-                        stream=sys.stdout)
-
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout)) #use for kaggle
-
-sys.path.append("../")
-
-from fedlab.utils.dataset.functional import partition_report
-from fedlab.models.build_model import build_model
-
-model = build_model(args)
-
-# We provide a example usage of patitioned CIFAR10 dataset
-# Download raw CIFAR10 dataset and partition them according to given configuration
+args.noniid_percentage = 0.8
+args.selection = False
 
 from torchvision import transforms
 from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
 import pandas as pd
 
 fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
-                                  path="../datasets/cifar10/fedcifar10/",
-                                  dataname=args.dataname,
-                                  num_clients=args.total_client,
-                                  num_classes=args.num_classes,
-                                  balance=False,
-                                  partition="dirichlet",
-                                  seed=args.seed,
-                                  dir_alpha=args.alpha,
-                                  preprocess=args.preprocess,
-                                  download=True,
-                                  verbose=True,
-                                  transform=transforms.ToTensor())
+                                path="../datasets/cifar10/fedcifar10/",
+                                dataname=args.dataname,
+                                num_clients=args.total_client,
+                                num_classes=args.num_classes,
+                                balance=False,
+                                partition="dirichlet",
+                                seed=args.seed,
+                                dir_alpha=args.alpha,
+                                preprocess=args.preprocess,
+                                download=True,
+                                verbose=True,
+                                noniid_percentage=args.noniid_percentage, 
+                                transform=transforms.Compose([
+                                        transforms.ToPILImage(),
+                                        transforms.ToTensor()
+                                    ])
+                                )
 
 # Get the dataset for the 0-th client
 dataset_train = fed_cifar10.get_dataset(0, type="train")
 dataset_test = fed_cifar10.get_dataset(0, type="test")
-
-# Get the dataloaders
-dataloader_train = fed_cifar10.get_dataloader(0, args.batch_size, type="train")
-dataloader_test = fed_cifar10.get_dataloader(0, args.batch_size, type="test")
 
 # generate partition report
 csv_file = f"./partition-reports/{args.dataname}_hetero_dir_{args.alpha}_{args.total_client}clients.csv"
@@ -91,7 +91,7 @@ from fedlab.contrib.algorithm.fedmdcs import FedMDCSSerialClientTrainer
 # local train configuration
 args.epochs = 5
 args.batch_size = 16
-args.lr = 0.0003
+args.lr = 0.01
 
 trainer = SGDSerialClientTrainer(model, args.total_client, cuda=args.cuda) # serial trainer
 #trainer = SGDClientTrainer(model, cuda=True) # single trainer
@@ -105,18 +105,18 @@ from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 from fedlab.contrib.algorithm.fedmdcs import FedMDCSServerHandler
 
 # global configuration
-args.com_round = 100
-args.sample_ratio = 1
+args.com_round = 200
+args.sample_ratio = 0.5
 args.top_n_clients = (args.sample_ratio/2)*args.total_client 
 
 handler = SyncServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client, top_n_clients=args.top_n_clients, device=args.device)
-#handler = FedMDCSServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client, 
+#handler = FedMDCSServerHandler(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client, 
 #                            top_n_clients=args.top_n_clients)
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from fedlab.utils.functional import evaluate
+from fedlab.utils.functional import evaluate, globaltest
 from fedlab.core.standalone import StandalonePipeline
 
 from torch import nn
@@ -131,7 +131,7 @@ class EvalPipeline(StandalonePipeline):
         self.bacc = []
         self.best_performance = 0
         self.best_balanced_accuracy = 0
-        
+
     def main(self):
         t=0
         while self.handler.if_stop is False:
@@ -147,24 +147,32 @@ class EvalPipeline(StandalonePipeline):
             for pack in uploads:
                 self.handler.load(pack)
 
-            loss, acc, bacc = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
-            print("Round {}, Loss {:.4f}, Test Accuracy {:.4f}, Balanced Accuracy {:.4f}".format(t, loss, acc, bacc))
-            
+            loss = evaluate(self.handler.model, nn.CrossEntropyLoss(), self.test_loader)
+
+            pred = globaltest(copy.deepcopy(self.handler.model).to(
+                args.device), test_data, args)
+            acc = accuracy_score(test_data.targets, pred)
+            bacc = balanced_accuracy_score(test_data.targets, pred)
+
+            logging.info("Round : {}, Loss {:.4f}, Balanced Accuracy {:.4f}".format(t,loss, bacc))
+
             if bacc > self.best_balanced_accuracy:
+                self.best_round_number = t
                 self.best_balanced_accuracy = bacc
                 logging.info(f'Best balanced accuracy: {self.best_balanced_accuracy:.4f}')
 
             if acc > self.best_performance:
                 self.best_performance = acc
-                logging.info(f'Best accuracy: {self.best_performance:.4f}')
-
-            t+=1
+            
             self.loss.append(loss)
             self.acc.append(acc)
             self.bacc.append(bacc)
-    
-        logging.info(f'Final Best Balanced Accuracy: {self.best_balanced_accuracy:.4f}')
-
+            t += 1
+   
+        logging.info('Final best balanced accuracy: {:.4f}, Best model number : {} '.format(self.best_balanced_accuracy, self.best_round_number))
+        logging.info(self.bacc)
+        logging.info(f"alpha : {args.alpha}")
+            
     def show(self):
         plt.figure(figsize=(8,4.5))
         ax = plt.subplot(1,2,1)
@@ -177,8 +185,22 @@ class EvalPipeline(StandalonePipeline):
         ax2.set_xlabel("Communication Round")
         ax2.set_ylabel("Accuarcy")
         
-        plt.savefig(f"./imgs/{args.dataname}_dir_alpha_{args.alpha}_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
-   
+        plt.savefig(f"./imgs/mdcs{args.dataname}_dir_alpha_{args.alpha}_loss_accuracy.png", dpi=400, bbox_inches = 'tight')
+
+    def show_b(self):
+        plt.figure(figsize=(8,4.5))
+        ax = plt.subplot(1,2,1)
+        ax.plot(np.arange(len(self.loss)), self.loss)
+        ax.set_xlabel("Communication Round")
+        ax.set_ylabel("Loss")
+        
+        ax2 = plt.subplot(1,2,2)
+        ax2.plot(np.arange(len(self.bacc)), self.bacc)
+        ax2.set_xlabel("Communication Round")
+        ax2.set_ylabel("Balanced Accuarcy")
+        
+        plt.savefig(f"./imgs/mdcs_{args.dataname}_dir_alpha_{args.alpha}_loss_balanced_accuracy.png", dpi=400, bbox_inches = 'tight')
+ 
         
 test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
                                        train=False,
