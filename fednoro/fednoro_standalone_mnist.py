@@ -31,48 +31,48 @@ sys.path.append(project_root)
 
 # configuration
 from fedlab.models.build_model import build_model
+from fedlab.models.mlp import MLP, MLR
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA_KD, DaAggregator
 from fedlab.utils.fednoro_utils import add_noise, set_seed, get_output, get_current_consistency_weight, set_output_files
 from fedlab.contrib.algorithm.fednoro import FedNoRoSerialClientTrainer, FedNoRoServerHandler, FedAvgServerHandler, FedAvgServerHandlerS2
 from fedlab.contrib.algorithm.basic_server import SyncServerHandler
 
-# We provide a example usage of patitioned CIFAR10 dataset
-# Download raw CIFAR10 dataset and partition them according to given configuration
+# We provide a example usage of patitioned MNIST dataset
+# Download raw MNIST dataset and partition them according to given configuration
 
 from torchvision import transforms
-from fedlab.contrib.dataset.partitioned_cifar10 import PartitionedCIFAR10
+from fedlab.contrib.dataset.partitioned_mnist import PartitionedMNIST
+
 
 ############################################
 #           Set up the dataset             #
 ############################################
 
-fed_cifar10 = PartitionedCIFAR10(root="../datasets/cifar10/",
-                                path="../datasets/cifar10/fedcifar10/",
-                                dataname=args.dataname,
-                                num_clients=args.total_client,
-                                num_classes=args.n_classes,
-                                balance=True,
-                                partition="dirichlet",
-                                seed=args.seed,
-                                dir_alpha=args.alpha,
-                                preprocess=args.preprocess,
-                                download=True,
-                                verbose=True,
-                                transform=transforms.ToTensor())
+fed_mnist = PartitionedMNIST(root="../datasets/mnist/",
+                            path="../datasets/mnist/fedmnist/",
+                            num_clients=args.total_client,
+                            partition="noniid-labeldir",
+                            dir_alpha=args.alpha,
+                            seed=args.seed,
+                            preprocess=args.preprocess,
+                            download=True,
+                            verbose=True,
+                            transform=transforms.ToTensor())
+
 
 # Get the dataset for the 0-th client
-dataset_train = fed_cifar10.get_dataset(0, type="train")
-dataset_test = fed_cifar10.get_dataset(0, type="test")
+dataset_train = fed_mnist.get_dataset(0, type="train")
+dataset_test = fed_mnist.get_dataset(0, type="test")
 
 # Get the dataloaders
-dataloader_train = fed_cifar10.get_dataloader(0, args.batch_size, type="train")
-dataloader_test = fed_cifar10.get_dataloader(0, args.batch_size, type="test")
+dataloader_train = fed_mnist.get_dataloader(0, args.batch_size, type="train")
+dataloader_test = fed_mnist.get_dataloader(0, args.batch_size, type="test")
 
-logging.info(
-    f"train: {Counter(fed_cifar10.targets_train)}, total: {len(fed_cifar10.targets_train)}")
-logging.info(
-    f"test: {Counter(fed_cifar10.targets_test)}, total: {len(fed_cifar10.targets_test)}")
+#logging.info(
+#    f"train: {Counter(fed_mnist.targets_train)}, total: {len(fed_mnist.targets_train)}")
+#logging.info(
+#    f"test: {Counter(fed_mnist.targets_test)}, total: {len(fed_mnist.targets_test)}")
 
 ############################################
 #                  Dataset                 #
@@ -84,7 +84,7 @@ import torchvision
 
 # generate partition report
 csv_file = f"./partition-reports/{args.dataname}_{args.level_n_system}_{args.total_client}_clients.csv"
-partition_report(fed_cifar10.targets_train, fed_cifar10.data_indices_train, 
+partition_report(fed_mnist.targets_train, fed_mnist.data_indices_train, 
                  class_num=args.n_classes, 
                  verbose=False, file=csv_file)
 
@@ -96,7 +96,7 @@ col_names = [f"class-{i}" for i in range(args.n_classes)]
 for col in col_names:
     hetero_dir_part_df[col] = (hetero_dir_part_df[col] * hetero_dir_part_df['TotalAmount']).astype(int)
 
-train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
+train_data = torchvision.datasets.MNIST(root="../datasets/mnist/",
                                           train=True,
                                           transform=transforms.ToTensor())
 
@@ -105,18 +105,18 @@ train_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
 ############################################
 
 
-y_train = np.array(fed_cifar10.targets_train)
-y_train_noisy, gamma_s, real_noise_level = add_noise(args, y_train, fed_cifar10.data_indices_train)
-fed_cifar10.targets_train = y_train_noisy
+y_train = np.array(fed_mnist.targets_train)
+y_train_noisy, gamma_s, real_noise_level = add_noise(args, y_train, fed_mnist.data_indices_train)
+fed_mnist.targets_train = y_train_noisy
 
 # Noise Generation Bis
 y_train = np.array(train_data.targets)
-y_train_noisy, gamma_s, real_noise_level = add_noise(args, y_train, fed_cifar10.data_indices_train)
+y_train_noisy, gamma_s, real_noise_level = add_noise(args, y_train, fed_mnist.data_indices_train)
 train_data.targets = y_train_noisy
 
 # generate partition report
 csv_file = f"./partition-reports/{args.dataname}_nlvl_{args.level_n_system}_{args.total_client}_clients.csv"
-partition_report(fed_cifar10.targets_train, fed_cifar10.data_indices_train, 
+partition_report(fed_mnist.targets_train, fed_mnist.data_indices_train, 
                  class_num=args.n_classes, 
                  verbose=False, file=csv_file)
 
@@ -132,8 +132,8 @@ hetero_dir_part_df[col_names].iloc[:5].plot.barh(stacked=True)
 
 # local train configuration
 
-model = build_model(args)
-
+#model = build_model(args)
+model = MLR(784, 10)
 set_seed(args.seed)
 
 ############################################
@@ -148,7 +148,7 @@ from fedlab.contrib.algorithm.basic_client import SGDSerialClientTrainer, SGDCli
 # Create client trainer and server handler
 
 trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
-trainer.setup_dataset(fed_cifar10)
+trainer.setup_dataset(fed_mnist)
 trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
 from fedlab.utils.functional import evaluate, globaltest
@@ -163,7 +163,7 @@ from fedlab.core.standalone import StandalonePipeline
 #      Stage 1-1 - Evaluation Pipeline       #
 ############################################
 
-label_counts_per_client = trainer.get_num_of_each_class_global(fed_cifar10)
+label_counts_per_client = trainer.get_num_of_each_class_global(fed_mnist)
 for client_index, label_counts in enumerate(label_counts_per_client):
     logging.info(f"Client {client_index} label counts: {label_counts} total")
 
@@ -198,9 +198,9 @@ class EvalPipelineS1(StandalonePipeline):
 
             pred = globaltest(copy.deepcopy(self.handler.model).to(
                 args.device), test_data, args)
-            acc = accuracy_score(fed_cifar10.targets_test, pred)
-            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
-            cm = confusion_matrix(fed_cifar10.targets_test, pred)
+            acc = accuracy_score(fed_mnist.targets_test, pred)
+            bacc = balanced_accuracy_score(fed_mnist.targets_test, pred)
+            cm = confusion_matrix(fed_mnist.targets_test, pred)
 
             logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
             logging.info(cm)
@@ -240,7 +240,7 @@ class EvalPipelineS1(StandalonePipeline):
         plt.savefig(f"./imgs/s1_fednoro_{args.dataname}_nlvl_{args.level_n_system}_loss_balanced_accuracy_{self.best_balanced_accuracy}.png", dpi=400, bbox_inches = 'tight')
         
 
-test_data = torchvision.datasets.CIFAR10(root="../datasets/cifar10/",
+test_data = torchvision.datasets.MNIST(root="../datasets/mnist/",
                                        train=False,
                                        transform=transforms.ToTensor())        
 
@@ -285,7 +285,7 @@ user_id = list(range(args.total_client))
 np.set_printoptions(precision=2)
 
 for id in range(args.total_client):
-    idxs = fed_cifar10.data_indices_train[id]
+    idxs = fed_mnist.data_indices_train[id]
     for idx in idxs:
         c = train_data.targets[idx]
         num[id, c] += 1
@@ -336,7 +336,7 @@ for i in range(reduced_metrics.shape[0]):
 
 plt.title('Visualization of Noisy and Clean Clusters in Reduced 2D Space')
 plt.legend()
-plt.savefig(f'./imgs/{args.dataname}_nlvl_{args.level_n_system}_{args.level_n_lowerb}_{args.level_n_upperb}_noisy_clean_clusters_pca.png')
+plt.savefig(f'./imgs/{args.dataname}_nlvl_{args.level_n_system}_noisy_clean_clusters_pca.png')
 plt.show()
 
 # Calculate the centroid of the clean clients' cluster
@@ -485,9 +485,9 @@ class EvalPipelineS2Alt(StandalonePipeline):
 
             pred = globaltest(copy.deepcopy(self.handler.model).to(
                 args.device), test_data, args)
-            acc = accuracy_score(fed_cifar10.targets_test, pred)
-            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
-            cm = confusion_matrix(fed_cifar10.targets_test, pred)
+            acc = accuracy_score(fed_mnist.targets_test, pred)
+            bacc = balanced_accuracy_score(fed_mnist.targets_test, pred)
+            cm = confusion_matrix(fed_mnist.targets_test, pred)
 
             logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
             logging.info(cm)
@@ -593,9 +593,9 @@ class EvalPipelineS2(StandalonePipeline):
 
             pred = globaltest(copy.deepcopy(self.handler.model).to(
                 args.device), test_data, args)
-            acc = accuracy_score(fed_cifar10.targets_test, pred)
-            bacc = balanced_accuracy_score(fed_cifar10.targets_test, pred)
-            cm = confusion_matrix(fed_cifar10.targets_test, pred)
+            acc = accuracy_score(fed_mnist.targets_test, pred)
+            bacc = balanced_accuracy_score(fed_mnist.targets_test, pred)
+            cm = confusion_matrix(fed_mnist.targets_test, pred)
 
             logging.info("Loss {:.4f}, Balanced Accuracy {:.4f}".format(loss, bacc))
             logging.info(cm)
@@ -659,7 +659,7 @@ if args.aggregator == 'fedavg':
     logging.info("fedavg")
 
     trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
-    trainer.setup_dataset(fed_cifar10)
+    trainer.setup_dataset(fed_mnist)
     trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
     handler = FedAvgServerHandlerS2(model=model, global_round=args.com_round, sample_ratio=1, cuda=args.cuda, num_clients=args.total_client)
@@ -678,7 +678,7 @@ if args.aggregator == 'fednoro':
     logging.info("fednoro")
     
     trainer = FedNoRoSerialClientTrainer(model, args.total_client, base_lr=args.lr, cuda=args.cuda)
-    trainer.setup_dataset(fed_cifar10)
+    trainer.setup_dataset(fed_mnist)
     trainer.setup_optim(args.epochs, args.batch_size, args.lr)
 
     handler = FedNoRoServerHandler(model=model, global_round=args.com_round, sample_ratio=args.sample_ratio, cuda=args.cuda, num_clients=args.total_client)

@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 import torchvision
 from torchvision import transforms
 
-from .basic_dataset import FedDataset, Subset
+from .basic_dataset import FedDataset, Subset, BaseDataset
 from ...utils.dataset.partition import CIFAR10Partitioner, CIFAR100Partitioner, MNISTPartitioner
 
 
@@ -41,6 +41,7 @@ class PartitionedMNIST(FedDataset):
         target_transform (callable, optional): A function/transform that takes in the target and transforms it.
         noniid_percentage (float, optional): Percentage of clients that should be non-iid. Only works if ``partition="mixed-iid-noniid"``. Default as ``0.5``.
     """
+
     def __init__(self,
                  root,
                  path,
@@ -68,8 +69,6 @@ class PartitionedMNIST(FedDataset):
                             verbose=verbose,
                             seed=seed,
                             download=download,
-                            transform=transform,
-                            target_transform=target_transform,
                             noniid_percentage=noniid_percentage)
 
     def preprocess(self,
@@ -78,8 +77,6 @@ class PartitionedMNIST(FedDataset):
                    verbose=True,
                    seed=None,
                    download=True,
-                   transform=None,
-                   target_transform=None,
                    noniid_percentage=0.5):
         """Perform FL partition on the dataset, and save each subset for each client into ``data{cid}.pkl`` file.
 
@@ -87,40 +84,75 @@ class PartitionedMNIST(FedDataset):
         """
         self.download = download
 
-        if os.path.exists(self.path) is not True:
+        if not os.path.exists(self.path):
             os.mkdir(self.path)
             os.mkdir(os.path.join(self.path, "train"))
-            os.mkdir(os.path.join(self.path, "val"))
             os.mkdir(os.path.join(self.path, "test"))
 
-        trainset = torchvision.datasets.MNIST(root=self.root,
-                                              train=True,
-                                              download=download)
+        # Download and load the MNIST dataset
+        trainset = torchvision.datasets.MNIST(root=self.root, train=True, transform=self.transform, download=download)
+        testset = torchvision.datasets.MNIST(root=self.root, train=False, transform=self.transform, download=download)
 
-        self.targets = trainset.targets  # Store targets as an instance variable
+        self.targets_train = trainset.targets
+        self.targets_test = testset.targets
 
-        partitioner = MNISTPartitioner(targets=self.targets,
-                                       num_clients=self.num_clients,
-                                       partition=partition,
-                                       dir_alpha=dir_alpha,
-                                       verbose=verbose,
-                                       seed=seed,
-                                       noniid_percentage=noniid_percentage)
+        # Partition the dataset into clients
+        partitioner_train = MNISTPartitioner(
+            targets=self.targets_train,
+            num_clients=self.num_clients,
+            partition=partition,
+            dir_alpha=dir_alpha,
+            verbose=verbose,
+            seed=seed,
+            noniid_percentage=noniid_percentage
+        )
+        partitioner_test = MNISTPartitioner(
+            targets=self.targets_test,
+            num_clients=self.num_clients,
+            partition=partition,
+            dir_alpha=dir_alpha,
+            verbose=verbose,
+            seed=seed,
+            noniid_percentage=noniid_percentage
+        )
 
-        self.client_dict = partitioner.client_dict  # Store client_dict as an instance variable
+        self.data_indices_train = partitioner_train.client_dict
+        self.data_indices_test = partitioner_test.client_dict
 
-        # partition
-        subsets = {
-            cid: Subset(trainset,
-                        partitioner.client_dict[cid],
-                        transform=transform,
-                        target_transform=target_transform)
-            for cid in range(self.num_clients)
-        }
-        for cid in subsets:
+        samples_train, labels_train = [], []
+        samples_test, labels_test = [], []
+
+        for x, y in trainset:
+            samples_train.append(x)
+            labels_train.append(y)
+
+        for x, y in testset:
+            samples_test.append(x)
+            labels_test.append(y)
+
+        for cid_train, indices_train in self.data_indices_train.items():
+            data_train, label_train = [], []
+            for idx in indices_train:
+                x_train, y_train = samples_train[idx], labels_train[idx]
+                data_train.append(x_train)
+                label_train.append(y_train)
+            dataset_train = BaseDataset(data_train, label_train)
             torch.save(
-                subsets[cid],
-                os.path.join(self.path, "train", "data{}.pkl".format(cid)))
+                dataset_train,
+                os.path.join(self.path, "train", f"data{cid_train}.pkl"),
+            )
+
+        for cid_test, indices_test in self.data_indices_test.items():
+            data_test, label_test = [], []
+            for idx in indices_test:
+                x_test, y_test = samples_test[idx], labels_test[idx]
+                data_test.append(x_test)
+                label_test.append(y_test)
+            dataset_test = BaseDataset(data_test, label_test)
+            torch.save(
+                dataset_test,
+                os.path.join(self.path, "test", f"data{cid_test}.pkl"),
+            )
 
     def get_dataset(self, cid, type="train"):
         """Load subdataset for client with client ID ``cid`` from local file.

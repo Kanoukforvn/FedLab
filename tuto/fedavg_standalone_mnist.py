@@ -39,6 +39,7 @@ args.noniid_percentage = 0.5
 from torchvision import transforms
 from fedlab.contrib.dataset.partitioned_mnist import PartitionedMNIST
 import pandas as pd
+from collections import Counter
 
 trainset = torchvision.datasets.MNIST(root="../../../../data/MNIST/", train=True, download=True)
 
@@ -60,6 +61,11 @@ fed_mnist = PartitionedMNIST(
 )
 dataset = fed_mnist.get_dataset(0) # get the 0-th client's dataset
 dataloader = fed_mnist.get_dataloader(0, batch_size=16) # get the 0-th client's dataset loader with batch size 128
+
+logging.info(
+    f"train: {Counter(fed_mnist.targets_train)}, total: {len(fed_mnist.targets_train)}")
+logging.info(
+    f"test: {Counter(fed_mnist.targets_test)}, total: {len(fed_mnist.targets_test)}")
 
 # generate partition report
 csv_file = f"./partition-reports/{args.dataname}_hetero_dir_{args.alpha}_{args.total_client}clients.csv"
