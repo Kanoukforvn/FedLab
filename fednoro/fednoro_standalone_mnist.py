@@ -32,6 +32,7 @@ sys.path.append(project_root)
 # configuration
 from fedlab.models.build_model import build_model
 from fedlab.models.mlp import MLP, MLR
+from fedlab.models.cnn import CNNMnistPns, CNN_MNIST
 from fedlab.utils.dataset.functional import partition_report
 from fedlab.utils import Logger, SerializationTool, Aggregators, LogitAdjust, LA_KD, DaAggregator
 from fedlab.utils.fednoro_utils import add_noise, set_seed, get_output, get_current_consistency_weight, set_output_files
@@ -59,7 +60,8 @@ fed_mnist = PartitionedMNIST(root="../datasets/mnist/",
                             download=True,
                             verbose=True,
                             transform=transforms.ToTensor())
-
+#                            transforms.Lambda(lambda x: x.repeat(3, 1, 1))])
+#                            )
 
 # Get the dataset for the 0-th client
 dataset_train = fed_mnist.get_dataset(0, type="train")
@@ -133,7 +135,8 @@ hetero_dir_part_df[col_names].iloc[:5].plot.barh(stacked=True)
 # local train configuration
 
 #model = build_model(args)
-model = MLR(784, 10)
+#model = MLP(784, 10)
+model = CNN_MNIST()
 set_seed(args.seed)
 
 ############################################
